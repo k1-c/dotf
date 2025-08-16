@@ -115,15 +115,6 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         let mut errors = Vec::new();
         let mut warnings = Vec::new();
 
-        // Validate repository config
-        if config.repo.name.is_empty() {
-            errors.push("Repository name cannot be empty".to_string());
-        }
-
-        if config.repo.version.is_empty() {
-            errors.push("Repository version cannot be empty".to_string());
-        }
-
         // Validate symlinks
         let repo_path = self.filesystem.dott_repo_path();
         
@@ -178,8 +169,6 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         if !validation.is_valid {
             return Ok(ConfigSummary {
                 is_valid: false,
-                repo_name: None,
-                repo_version: None,
                 symlinks_count: 0,
                 scripts_count: 0,
                 platforms_supported: vec![],
@@ -212,8 +201,6 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
         Ok(ConfigSummary {
             is_valid: true,
-            repo_name: Some(config.repo.name),
-            repo_version: Some(config.repo.version),
             symlinks_count,
             scripts_count,
             platforms_supported,
@@ -234,8 +221,6 @@ pub struct ConfigValidationResult {
 #[derive(Debug)]
 pub struct ConfigSummary {
     pub is_valid: bool,
-    pub repo_name: Option<String>,
-    pub repo_version: Option<String>,
     pub symlinks_count: usize,
     pub scripts_count: usize,
     pub platforms_supported: Vec<String>,
@@ -246,7 +231,7 @@ pub struct ConfigSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{RepoConfig, ScriptsConfig, DepsScripts};
+    use crate::core::config::dott_config::{ScriptsConfig, DepsScripts};
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         prompt::tests::MockPrompt,
@@ -270,12 +255,6 @@ mod tests {
         custom_scripts.insert("setup".to_string(), "scripts/setup.sh".to_string());
 
         DottConfig {
-            repo: RepoConfig {
-                name: "my-dotfiles".to_string(),
-                version: "1.0.0".to_string(),
-                description: Some("Personal dotfiles".to_string()),
-                author: Some("Test User".to_string()),
-            },
             symlinks,
             scripts: ScriptsConfig {
                 deps: DepsScripts {
@@ -299,8 +278,8 @@ mod tests {
         filesystem.add_file(&config_path, &config_content);
         
         let result = service.show_repository_config().await.unwrap();
-        assert!(result.contains("my-dotfiles"));
-        assert!(result.contains("1.0.0"));
+        assert!(result.contains("setup"));
+        assert!(result.contains("install-linux"));
     }
 
     #[tokio::test]
@@ -382,8 +361,6 @@ mod tests {
         
         let summary = service.show_config_summary().await.unwrap();
         assert!(summary.is_valid);
-        assert_eq!(summary.repo_name, Some("my-dotfiles".to_string()));
-        assert_eq!(summary.repo_version, Some("1.0.0".to_string()));
         assert_eq!(summary.symlinks_count, 2);
         assert_eq!(summary.scripts_count, 2);
         assert!(summary.platforms_supported.contains(&"linux".to_string()));

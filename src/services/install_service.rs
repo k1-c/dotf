@@ -359,7 +359,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{RepoConfig, ScriptsConfig, DepsScripts, PlatformConfig};
+    use crate::core::config::dott_config::{ScriptsConfig, DepsScripts, PlatformConfig};
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         prompt::tests::MockPrompt,
@@ -376,12 +376,6 @@ mod tests {
         custom_scripts.insert("setup-vim".to_string(), "scripts/setup-vim.sh".to_string());
 
         DottConfig {
-            repo: RepoConfig {
-                name: "test-dotfiles".to_string(),
-                version: "1.0.0".to_string(),
-                description: Some("Test dotfiles".to_string()),
-                author: Some("Test User".to_string()),
-            },
             symlinks,
             scripts: ScriptsConfig {
                 deps: DepsScripts {

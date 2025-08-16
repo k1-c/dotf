@@ -20,14 +20,8 @@ Dottは、リモートリポジトリからdotfilesを取得・管理・同期�
 リポジトリのルートに配置するか、.dott/dott.tomlとして配置します。
 
 ```toml
-[repo]
-name = "My Dotfiles"
-version = "バージョン"
-description = "説明（オプション）"
-author = "作者（オプション）"
-
 [symlinks]
-"リポジトリ内パス" = "システム内パス"
+"システム内パス" = "リポジトリ内パス"
 
 [scripts.deps]
 macos = "スクリプトパス"

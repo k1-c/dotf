@@ -51,8 +51,6 @@ pub struct SymlinkStatusDetail {
 pub struct ConfigStatusInfo {
     pub valid: bool,
     pub path: String,
-    pub repo_name: String,
-    pub repo_version: String,
     pub symlinks_count: usize,
     pub custom_scripts_count: usize,
     pub has_platform_config: bool,
@@ -115,8 +113,6 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
                 config: ConfigStatusInfo {
                     valid: false,
                     path: String::new(),
-                    repo_name: String::new(),
-                    repo_version: String::new(),
                     symlinks_count: 0,
                     custom_scripts_count: 0,
                     has_platform_config: false,
@@ -167,8 +163,6 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
             return Ok(ConfigStatusInfo {
                 valid: false,
                 path: config_path,
-                repo_name: String::new(),
-                repo_version: String::new(),
                 symlinks_count: 0,
                 custom_scripts_count: 0,
                 has_platform_config: false,
@@ -182,8 +176,6 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
                 return Ok(ConfigStatusInfo {
                     valid: false,
                     path: config_path,
-                    repo_name: String::new(),
-                    repo_version: String::new(),
                     symlinks_count: 0,
                     custom_scripts_count: 0,
                     has_platform_config: false,
@@ -197,8 +189,6 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         Ok(ConfigStatusInfo {
             valid: errors.is_empty(),
             path: config_path,
-            repo_name: config.repo.name,
-            repo_version: config.repo.version,
             symlinks_count: config.symlinks.len(),
             custom_scripts_count: config.scripts.custom.len(),
             has_platform_config,

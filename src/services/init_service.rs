@@ -139,15 +139,6 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
     }
 
     fn validate_config(&self, config: &DottConfig) -> DottResult<()> {
-        // Validate repo config
-        if config.repo.name.trim().is_empty() {
-            return Err(DottError::Config("Repository name cannot be empty".to_string()));
-        }
-
-        if config.repo.version.trim().is_empty() {
-            return Err(DottError::Config("Repository version cannot be empty".to_string()));
-        }
-
         // Validate symlinks are not empty paths
         for (target, source) in &config.symlinks {
             if target.trim().is_empty() || source.trim().is_empty() {

@@ -256,11 +256,6 @@ async fn run() -> DottResult<()> {
                             println!("   Status: ❌ Invalid");
                         }
                         
-                        if let Some(name) = &summary.repo_name {
-                            if let Some(version) = &summary.repo_version {
-                                println!("   Repository: {} v{}", name, version);
-                            }
-                        }
                         
                         println!("   Symlinks: {}", summary.symlinks_count);
                         println!("   Scripts: {}", summary.scripts_count);

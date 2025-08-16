@@ -3,21 +3,12 @@ use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DottConfig {
-    pub repo: RepoConfig,
     #[serde(default)]
     pub symlinks: HashMap<String, String>,
     #[serde(default)]
     pub scripts: ScriptsConfig,
     #[serde(default)]
     pub platform: PlatformConfig,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RepoConfig {
-    pub name: String,
-    pub version: String,
-    pub description: Option<String>,
-    pub author: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]

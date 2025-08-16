@@ -54,12 +54,6 @@ mod tests {
     async fn test_repository_manager_validate_and_fetch() {
         let mut mock_repo = MockRepository::new();
         mock_repo.set_config_response(DottConfig {
-            repo: crate::core::config::dott_config::RepoConfig {
-                name: "test".to_string(),
-                version: "1.0.0".to_string(),
-                description: None,
-                author: None,
-            },
             symlinks: std::collections::HashMap::new(),
             scripts: crate::core::config::dott_config::ScriptsConfig::default(),
             platform: crate::core::config::dott_config::PlatformConfig::default(),
@@ -70,8 +64,8 @@ mod tests {
             .await
             .unwrap();
         
-        assert_eq!(config.repo.name, "test");
-        assert_eq!(config.repo.version, "1.0.0");
+        assert_eq!(config.symlinks.len(), 0);
+        assert_eq!(config.scripts.custom.len(), 0);
     }
     
     #[tokio::test]
