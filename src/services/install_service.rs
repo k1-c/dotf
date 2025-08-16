@@ -110,8 +110,14 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         let backup_entries = self.symlink_manager.create_symlinks(&operations, true).await?;
 
         println!(" Installed {} symlinks", operations.len());
+        
+        // Display the list of created symlinks
+        println!("\n📋 Symlinks created:");
+        for operation in &operations {
+            println!("  {} -> {}", operation.target_path, operation.source_path);
+        }
         if !backup_entries.is_empty() {
-            println!("=� Created {} backups", backup_entries.len());
+            println!("\n=� Created {} backups", backup_entries.len());
         }
 
         Ok(backup_entries)

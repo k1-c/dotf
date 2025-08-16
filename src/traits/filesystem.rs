@@ -118,7 +118,28 @@ pub mod tests {
         }
         
         async fn remove_dir(&self, path: &str) -> DottResult<()> {
+            // Remove directory itself
             self.directories.lock().unwrap().retain(|p| p != path);
+            
+            // Remove all files and subdirectories under this path
+            let path_prefix = if path.ends_with('/') {
+                path.to_string()
+            } else {
+                format!("{}/", path)
+            };
+            
+            self.files.lock().unwrap().retain(|file_path, _| {
+                !file_path.starts_with(&path_prefix) && file_path != path
+            });
+            
+            self.directories.lock().unwrap().retain(|dir_path| {
+                !dir_path.starts_with(&path_prefix) && dir_path != path
+            });
+            
+            self.symlinks.lock().unwrap().retain(|link_path, _| {
+                !link_path.starts_with(&path_prefix) && link_path != path
+            });
+            
             Ok(())
         }
         

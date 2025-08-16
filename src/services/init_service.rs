@@ -152,6 +152,24 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
     }
 
     async fn setup_dott_directory(&self) -> DottResult<()> {
+        let dott_dir = self.filesystem.dott_directory();
+        
+        // Check if .dott directory already exists
+        if self.filesystem.exists(&dott_dir).await? {
+            println!("⚠️  Dott directory already exists at: {}", dott_dir);
+            let should_overwrite = self.prompt.confirm(
+                "Do you want to remove the existing .dott directory and start fresh? (y/N)"
+            ).await?;
+            
+            if !should_overwrite {
+                return Err(DottError::Operation("Initialization cancelled by user".to_string()));
+            }
+            
+            // Remove existing directory
+            println!("🗑️  Removing existing .dott directory...");
+            self.filesystem.remove_dir(&dott_dir).await?;
+        }
+        
         // Create main dott directory
         self.filesystem.create_dott_directory().await?;
 
@@ -183,5 +201,187 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
             .map_err(|e| DottError::Config(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::config::dott_config::{ScriptsConfig, PlatformConfig};
+    use crate::traits::{
+        filesystem::tests::MockFileSystem,
+        prompt::tests::MockPrompt,
+        repository::tests::MockRepository,
+    };
+    use std::collections::HashMap;
+
+    fn create_test_config() -> DottConfig {
+        DottConfig {
+            symlinks: HashMap::from([
+                ("~/.vimrc".to_string(), ".vimrc".to_string()),
+            ]),
+            scripts: ScriptsConfig::default(),
+            platform: PlatformConfig::default(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_with_fresh_directory() {
+        let filesystem = MockFileSystem::new();
+        let mut repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        let config = create_test_config();
+        repository.set_config_response(config);
+
+        let service = InitService::new(repository, filesystem.clone(), prompt);
+        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+
+        assert!(result.is_ok());
+        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
+        assert!(filesystem.exists(&filesystem.dott_backup_path()).await.unwrap());
+        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_init_with_existing_directory_user_confirms() {
+        let filesystem = MockFileSystem::new();
+        let mut repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        // Pre-create .dott directory
+        filesystem.create_dott_directory().await.unwrap();
+        filesystem.add_file(&format!("{}/existing_file", filesystem.dott_directory()), "content");
+
+        let config = create_test_config();
+        repository.set_config_response(config);
+
+        // Set prompt to confirm overwrite
+        prompt.set_confirm_response(true);
+
+        let service = InitService::new(repository, filesystem.clone(), prompt);
+        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+
+        assert!(result.is_ok());
+        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
+        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+        // Existing file should be gone after overwrite
+        assert!(!filesystem.exists(&format!("{}/existing_file", filesystem.dott_directory())).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_init_with_existing_directory_user_cancels() {
+        let filesystem = MockFileSystem::new();
+        let mut repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        // Pre-create .dott directory
+        filesystem.create_dott_directory().await.unwrap();
+        filesystem.add_file(&format!("{}/existing_file", filesystem.dott_directory()), "content");
+
+        let config = create_test_config();
+        repository.set_config_response(config);
+
+        // Set prompt to reject overwrite
+        prompt.set_confirm_response(false);
+
+        let service = InitService::new(repository, filesystem.clone(), prompt);
+        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), DottError::Operation(_)));
+        // Existing file should still be there
+        assert!(filesystem.exists(&format!("{}/existing_file", filesystem.dott_directory())).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_reinit_removes_existing_repo() {
+        let filesystem = MockFileSystem::new();
+        let mut repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        // Setup existing initialization
+        filesystem.create_dott_directory().await.unwrap();
+        let settings = Settings {
+            repository_url: "https://github.com/old/repo.git".to_string(),
+            last_sync: None,
+            initialized_at: chrono::Utc::now(),
+        };
+        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
+        filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
+
+        let config = create_test_config();
+        repository.set_config_response(config);
+
+        // Set prompt to confirm reinit (for reinit confirmation)
+        prompt.set_confirm_response(true);
+        // Set prompt to confirm overwrite (for setup_dott_directory)
+        prompt.set_confirm_response(true);
+
+        let service = InitService::new(repository, filesystem.clone(), prompt);
+        let result = service.reinit("https://github.com/user/dotfiles.git".to_string()).await;
+
+        assert!(result.is_ok());
+        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
+        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_is_initialized_true() {
+        let filesystem = MockFileSystem::new();
+        let repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        // Setup existing initialization
+        filesystem.create_dott_directory().await.unwrap();
+        let settings = Settings {
+            repository_url: "https://github.com/user/dotfiles.git".to_string(),
+            last_sync: None,
+            initialized_at: chrono::Utc::now(),
+        };
+        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
+        filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
+
+        let service = InitService::new(repository, filesystem, prompt);
+        let result = service.is_initialized().await;
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_is_initialized_false() {
+        let filesystem = MockFileSystem::new();
+        let repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        let service = InitService::new(repository, filesystem, prompt);
+        let result = service.is_initialized().await;
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_invalid_symlink() {
+        let filesystem = MockFileSystem::new();
+        let repository = MockRepository::new();
+        let prompt = MockPrompt::new();
+
+        let service = InitService::new(repository, filesystem, prompt);
+        
+        let invalid_config = DottConfig {
+            symlinks: HashMap::from([
+                ("".to_string(), ".vimrc".to_string()), // Empty target
+            ]),
+            scripts: ScriptsConfig::default(),
+            platform: PlatformConfig::default(),
+        };
+
+        let result = service.validate_config(&invalid_config);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), DottError::Config(_)));
     }
 }
