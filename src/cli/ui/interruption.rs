@@ -25,7 +25,7 @@ impl InterruptionHandler {
     /// Set up signal handlers and return a handle to check for interruption
     pub async fn setup_handlers(&self) -> Arc<AtomicBool> {
         let interrupted = self.interrupted.clone();
-        
+
         #[cfg(unix)]
         {
             let interrupted_clone = interrupted.clone();
@@ -50,7 +50,9 @@ impl InterruptionHandler {
         {
             let interrupted_clone = interrupted.clone();
             tokio::spawn(async move {
-                signal::ctrl_c().await.expect("Failed to setup Ctrl-C handler");
+                signal::ctrl_c()
+                    .await
+                    .expect("Failed to setup Ctrl-C handler");
                 interrupted_clone.store(true, Ordering::SeqCst);
             });
         }
@@ -66,23 +68,29 @@ impl InterruptionHandler {
     /// Display initialization cancellation message
     pub fn show_init_cancellation(&self) {
         println!("\n"); // Add some space
-        
+
         // Stylish cancellation banner
         let border = "═".repeat(50);
         println!("{}", self.theme.muted(&border));
         println!("{}", self.theme.warning("🛑 Initialization Cancelled"));
         println!("{}", self.theme.muted(&border));
-        
+
         println!();
-        println!("{}", self.formatter.info("No changes were made to your system."));
+        println!(
+            "{}",
+            self.formatter.info("No changes were made to your system.")
+        );
         println!("{}", self.theme.muted("• No directories were created"));
         println!("{}", self.theme.muted("• No files were modified"));
         println!("{}", self.theme.muted("• No repositories were cloned"));
-        
+
         println!();
         println!("{}", self.formatter.info("To initialize later, run:"));
-        println!("  {}", self.theme.command("dott init --repo <your-repository-url>"));
-        
+        println!(
+            "  {}",
+            self.theme.command("dott init --repo <your-repository-url>")
+        );
+
         println!();
         println!("{}", self.theme.muted("Thank you for using Dott! 👋"));
     }
@@ -98,13 +106,19 @@ impl InterruptionHandler {
     pub fn show_install_cancellation(&self) {
         println!("\n");
         println!("{}", self.formatter.warning("Installation cancelled"));
-        println!("{}", self.theme.muted("Partial changes may have been applied"));
+        println!(
+            "{}",
+            self.theme.muted("Partial changes may have been applied")
+        );
     }
 
     /// Display generic operation cancellation
     pub fn show_operation_cancellation(&self, operation: &str) {
         println!("\n");
-        println!("{}", self.formatter.warning(&format!("{} cancelled", operation)));
+        println!(
+            "{}",
+            self.formatter.warning(&format!("{} cancelled", operation))
+        );
     }
 
     /// Show elegant "user interrupted" message for any operation
@@ -171,12 +185,10 @@ pub enum InterruptionError {
 /// Macro to make any operation cancellable
 #[macro_export]
 macro_rules! cancellable_operation {
-    ($future:expr, $handler:expr, $context:expr) => {
-        {
-            let interrupted = $handler.setup_handlers().await;
-            $crate::cli::ui::interruption::cancellable($future, interrupted, $handler, $context).await
-        }
-    };
+    ($future:expr, $handler:expr, $context:expr) => {{
+        let interrupted = $handler.setup_handlers().await;
+        $crate::cli::ui::interruption::cancellable($future, interrupted, $handler, $context).await
+    }};
 }
 
 #[cfg(test)]

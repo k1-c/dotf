@@ -1,4 +1,4 @@
-use crate::core::config::{DottConfig, Settings, Repository as RepositoryConfig};
+use crate::core::config::{DottConfig, Repository as RepositoryConfig, Settings};
 use crate::error::{DottError, DottResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 
@@ -25,12 +25,17 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         };
 
         // Validate the repository URL
-        self.repository.validate_remote(&url).await
-            .map_err(|e| DottError::Repository(format!("Invalid repository URL '{}': {}", url, e)))?;
+        self.repository.validate_remote(&url).await.map_err(|e| {
+            DottError::Repository(format!("Invalid repository URL '{}': {}", url, e))
+        })?;
 
         // Fetch and validate configuration
-        let config = self.repository.fetch_config(&url).await
-            .map_err(|e| DottError::Config(format!("Failed to fetch configuration from '{}': {}", url, e)))?;
+        let config = self.repository.fetch_config(&url).await.map_err(|e| {
+            DottError::Config(format!(
+                "Failed to fetch configuration from '{}': {}",
+                url, e
+            ))
+        })?;
 
         self.validate_config(&config)?;
 
@@ -55,21 +60,24 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         self.save_settings(&settings).await?;
 
         // Success messages will be handled by the CLI layer
-        
+
         Ok(())
     }
 
     pub async fn reinit(&self, repo_url: String) -> DottResult<()> {
         // Check if already initialized
         if self.is_initialized().await? {
-            let should_continue = self.prompt.confirm(
-                "Dott is already initialized. This will remove the existing setup. Continue?"
-            ).await?;
-            
+            let should_continue = self
+                .prompt
+                .confirm(
+                    "Dott is already initialized. This will remove the existing setup. Continue?",
+                )
+                .await?;
+
             if !should_continue {
                 return Ok(());
             }
-            
+
             // Remove existing repository
             let repo_path = self.filesystem.dott_repo_path();
             if self.filesystem.exists(&repo_path).await? {
@@ -83,9 +91,9 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
     pub async fn is_initialized(&self) -> DottResult<bool> {
         let settings_path = self.filesystem.dott_settings_path();
         let repo_path = self.filesystem.dott_repo_path();
-        
-        Ok(self.filesystem.exists(&settings_path).await? && 
-           self.filesystem.exists(&repo_path).await?)
+
+        Ok(self.filesystem.exists(&settings_path).await?
+            && self.filesystem.exists(&repo_path).await?)
     }
 
     pub async fn get_current_repository_url(&self) -> DottResult<Option<String>> {
@@ -108,7 +116,9 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         // Check if repository directory exists and is valid
         let repo_path = self.filesystem.dott_repo_path();
         if !self.filesystem.exists(&repo_path).await? {
-            return Err(DottError::Repository("Repository directory does not exist".to_string()));
+            return Err(DottError::Repository(
+                "Repository directory does not exist".to_string(),
+            ));
         }
 
         // Try to get repository status
@@ -119,10 +129,10 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
     async fn prompt_for_repository_url(&self) -> DottResult<String> {
         loop {
-            let url = self.prompt.input(
-                "Enter the repository URL for your dotfiles:",
-                None
-            ).await?;
+            let url = self
+                .prompt
+                .input("Enter the repository URL for your dotfiles:", None)
+                .await?;
 
             if url.trim().is_empty() {
                 continue;
@@ -141,9 +151,10 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         // Validate symlinks are not empty paths
         for (target, source) in &config.symlinks {
             if target.trim().is_empty() || source.trim().is_empty() {
-                return Err(DottError::Config(
-                    format!("Invalid symlink configuration: '{}' -> '{}'", source, target)
-                ));
+                return Err(DottError::Config(format!(
+                    "Invalid symlink configuration: '{}' -> '{}'",
+                    source, target
+                )));
             }
         }
 
@@ -152,21 +163,23 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
     async fn setup_dott_directory(&self) -> DottResult<()> {
         let dott_dir = self.filesystem.dott_directory();
-        
+
         // Check if .dott directory already exists
         if self.filesystem.exists(&dott_dir).await? {
             let should_overwrite = self.prompt.confirm(
                 &format!("Dott directory already exists at: {}. Do you want to remove it and start fresh?", dott_dir)
             ).await?;
-            
+
             if !should_overwrite {
-                return Err(DottError::Operation("Initialization cancelled by user".to_string()));
+                return Err(DottError::Operation(
+                    "Initialization cancelled by user".to_string(),
+                ));
             }
-            
+
             // Remove existing directory
             self.filesystem.remove_dir(&dott_dir).await?;
         }
-        
+
         // Create main dott directory
         self.filesystem.create_dott_directory().await?;
 
@@ -179,16 +192,17 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
     async fn save_settings(&self, settings: &Settings) -> DottResult<()> {
         let settings_path = self.filesystem.dott_settings_path();
-        let content = settings.to_toml()
+        let content = settings
+            .to_toml()
             .map_err(|e| DottError::Config(format!("Failed to serialize settings: {}", e)))?;
-        
+
         self.filesystem.write(&settings_path, &content).await?;
         Ok(())
     }
 
     async fn load_settings(&self) -> DottResult<Settings> {
         let settings_path = self.filesystem.dott_settings_path();
-        
+
         if !self.filesystem.exists(&settings_path).await? {
             return Err(DottError::NotInitialized);
         }
@@ -204,19 +218,16 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{ScriptsConfig, PlatformConfig};
+    use crate::core::config::dott_config::{PlatformConfig, ScriptsConfig};
     use crate::traits::{
-        filesystem::tests::MockFileSystem,
-        prompt::tests::MockPrompt,
+        filesystem::tests::MockFileSystem, prompt::tests::MockPrompt,
         repository::tests::MockRepository,
     };
     use std::collections::HashMap;
 
     fn create_test_config() -> DottConfig {
         DottConfig {
-            symlinks: HashMap::from([
-                ("~/.vimrc".to_string(), ".vimrc".to_string()),
-            ]),
+            symlinks: HashMap::from([("~/.vimrc".to_string(), ".vimrc".to_string())]),
             scripts: ScriptsConfig::default(),
             platform: PlatformConfig::default(),
         }
@@ -232,12 +243,23 @@ mod tests {
         repository.set_config_response(config);
 
         let service = InitService::new(repository, filesystem.clone(), prompt);
-        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+        let result = service
+            .init(Some("https://github.com/user/dotfiles.git".to_string()))
+            .await;
 
         assert!(result.is_ok());
-        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
-        assert!(filesystem.exists(&filesystem.dott_backup_path()).await.unwrap());
-        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_directory())
+            .await
+            .unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_backup_path())
+            .await
+            .unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_settings_path())
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
@@ -248,7 +270,10 @@ mod tests {
 
         // Pre-create .dott directory
         filesystem.create_dott_directory().await.unwrap();
-        filesystem.add_file(&format!("{}/existing_file", filesystem.dott_directory()), "content");
+        filesystem.add_file(
+            &format!("{}/existing_file", filesystem.dott_directory()),
+            "content",
+        );
 
         let config = create_test_config();
         repository.set_config_response(config);
@@ -257,13 +282,24 @@ mod tests {
         prompt.set_confirm_response(true);
 
         let service = InitService::new(repository, filesystem.clone(), prompt);
-        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+        let result = service
+            .init(Some("https://github.com/user/dotfiles.git".to_string()))
+            .await;
 
         assert!(result.is_ok());
-        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
-        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_directory())
+            .await
+            .unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_settings_path())
+            .await
+            .unwrap());
         // Existing file should be gone after overwrite
-        assert!(!filesystem.exists(&format!("{}/existing_file", filesystem.dott_directory())).await.unwrap());
+        assert!(!filesystem
+            .exists(&format!("{}/existing_file", filesystem.dott_directory()))
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
@@ -274,7 +310,10 @@ mod tests {
 
         // Pre-create .dott directory
         filesystem.create_dott_directory().await.unwrap();
-        filesystem.add_file(&format!("{}/existing_file", filesystem.dott_directory()), "content");
+        filesystem.add_file(
+            &format!("{}/existing_file", filesystem.dott_directory()),
+            "content",
+        );
 
         let config = create_test_config();
         repository.set_config_response(config);
@@ -283,12 +322,17 @@ mod tests {
         prompt.set_confirm_response(false);
 
         let service = InitService::new(repository, filesystem.clone(), prompt);
-        let result = service.init(Some("https://github.com/user/dotfiles.git".to_string())).await;
+        let result = service
+            .init(Some("https://github.com/user/dotfiles.git".to_string()))
+            .await;
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), DottError::Operation(_)));
         // Existing file should still be there
-        assert!(filesystem.exists(&format!("{}/existing_file", filesystem.dott_directory())).await.unwrap());
+        assert!(filesystem
+            .exists(&format!("{}/existing_file", filesystem.dott_directory()))
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
@@ -309,8 +353,14 @@ mod tests {
             initialized_at: chrono::Utc::now(),
         };
         let settings_content = settings.to_toml().unwrap();
-        filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
-        filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
+        filesystem
+            .write(&filesystem.dott_settings_path(), &settings_content)
+            .await
+            .unwrap();
+        filesystem
+            .create_dir_all(&filesystem.dott_repo_path())
+            .await
+            .unwrap();
 
         let config = create_test_config();
         repository.set_config_response(config);
@@ -321,11 +371,19 @@ mod tests {
         prompt.set_confirm_response(true);
 
         let service = InitService::new(repository, filesystem.clone(), prompt);
-        let result = service.reinit("https://github.com/user/dotfiles.git".to_string()).await;
+        let result = service
+            .reinit("https://github.com/user/dotfiles.git".to_string())
+            .await;
 
         assert!(result.is_ok());
-        assert!(filesystem.exists(&filesystem.dott_directory()).await.unwrap());
-        assert!(filesystem.exists(&filesystem.dott_settings_path()).await.unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_directory())
+            .await
+            .unwrap());
+        assert!(filesystem
+            .exists(&filesystem.dott_settings_path())
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
@@ -346,8 +404,14 @@ mod tests {
             initialized_at: chrono::Utc::now(),
         };
         let settings_content = settings.to_toml().unwrap();
-        filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
-        filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
+        filesystem
+            .write(&filesystem.dott_settings_path(), &settings_content)
+            .await
+            .unwrap();
+        filesystem
+            .create_dir_all(&filesystem.dott_repo_path())
+            .await
+            .unwrap();
 
         let service = InitService::new(repository, filesystem, prompt);
         let result = service.is_initialized().await;
@@ -376,7 +440,7 @@ mod tests {
         let prompt = MockPrompt::new();
 
         let service = InitService::new(repository, filesystem, prompt);
-        
+
         let invalid_config = DottConfig {
             symlinks: HashMap::from([
                 ("".to_string(), ".vimrc".to_string()), // Empty target

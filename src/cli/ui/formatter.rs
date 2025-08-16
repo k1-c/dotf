@@ -70,11 +70,7 @@ impl MessageFormatter {
 
     /// Format a key-value pair
     pub fn key_value(&self, key: &str, value: &str) -> String {
-        format!(
-            "{}: {}",
-            self.theme.label(key),
-            self.theme.value(value)
-        )
+        format!("{}: {}", self.theme.label(key), self.theme.value(value))
     }
 
     /// Format a path
@@ -97,12 +93,7 @@ impl MessageFormatter {
             OperationStatus::Skipped => (Icons::ARROW_RIGHT, self.theme.muted("SKIPPED")),
         };
 
-        format!(
-            "{} {} {}",
-            icon,
-            self.theme.label(operation),
-            styled_status
-        )
+        format!("{} {} {}", icon, self.theme.label(operation), styled_status)
     }
 
     /// Format a progress message
@@ -165,15 +156,15 @@ impl MessageFormatter {
     /// Format a summary box
     pub fn summary_box(&self, title: &str, items: &[(&str, &str)]) -> String {
         let mut result = String::new();
-        
+
         // Title
         result.push_str(&format!("{}\n", self.section(title)));
-        
+
         // Items
         for (key, value) in items {
             result.push_str(&format!("  {}\n", self.key_value(key, value)));
         }
-        
+
         result
     }
 }
@@ -247,7 +238,8 @@ impl OutputBuilder {
 
     /// Add a key-value pair
     pub fn key_value(mut self, key: &str, value: &str) -> Self {
-        self.content.push(format!("  {}", self.formatter.key_value(key, value)));
+        self.content
+            .push(format!("  {}", self.formatter.key_value(key, value)));
         self
     }
 

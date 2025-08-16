@@ -58,9 +58,9 @@ pub enum InstallTarget {
     /// Install configuration symlinks
     Config,
     /// Run custom installation script
-    Custom { 
+    Custom {
         /// Name of the custom script
-        name: String 
+        name: String,
     },
 }
 

@@ -21,7 +21,9 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         // Check if dott is initialized
         let settings_path = self.filesystem.dott_settings_path();
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Operation("Dott not initialized. Run 'dott init' first.".to_string()));
+            return Err(DottError::Operation(
+                "Dott not initialized. Run 'dott init' first.".to_string(),
+            ));
         }
 
         // Load current settings
@@ -30,12 +32,14 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
 
         // Check if repository exists
         if !self.filesystem.exists(&repo_path).await? {
-            return Err(DottError::Repository("Repository directory not found. Run 'dott init' to reinitialize.".to_string()));
+            return Err(DottError::Repository(
+                "Repository directory not found. Run 'dott init' to reinitialize.".to_string(),
+            ));
         }
 
         // Get repository status before sync
         let status_before = self.repository.get_status(&repo_path).await?;
-        
+
         if !status_before.is_clean && !force {
             return Err(DottError::Operation(
                 "Repository has uncommitted changes. Use --force to sync anyway, or commit your changes first.".to_string()
@@ -55,10 +59,13 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
             initialized_at: settings.initialized_at,
         };
 
-        let settings_content = updated_settings.to_toml()
+        let settings_content = updated_settings
+            .to_toml()
             .map_err(|e| DottError::Serialization(e.to_string()))?;
-        
-        self.filesystem.write(&settings_path, &settings_content).await?;
+
+        self.filesystem
+            .write(&settings_path, &settings_content)
+            .await?;
 
         Ok(SyncResult {
             had_uncommitted_changes: !status_before.is_clean,
@@ -84,7 +91,7 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         }
 
         let status = self.repository.get_status(&repo_path).await?;
-        
+
         if !status.is_clean {
             return Ok(SyncStatus::HasUncommittedChanges {
                 branch: status.current_branch,
@@ -117,10 +124,10 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
     async fn load_settings(&self) -> DottResult<Settings> {
         let settings_path = self.filesystem.dott_settings_path();
         let content = self.filesystem.read_to_string(&settings_path).await?;
-        
+
         let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
-        
+
         Ok(settings)
     }
 }
@@ -159,16 +166,21 @@ pub enum SyncStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::config::settings::Repository;
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         repository::{tests::MockRepository, RepositoryStatus},
     };
     use chrono::Utc;
 
-    fn create_test_service() -> (SyncService<MockRepository, MockFileSystem>, MockRepository, MockFileSystem) {
+    fn create_test_service() -> (
+        SyncService<MockRepository, MockFileSystem>,
+        MockRepository,
+        MockFileSystem,
+    ) {
         let mut repository = MockRepository::new();
         let filesystem = MockFileSystem::new();
-        
+
         // Set up default responses
         repository.set_status_response(RepositoryStatus {
             is_clean: true,
@@ -176,7 +188,7 @@ mod tests {
             behind_count: 0,
             current_branch: "main".to_string(),
         });
-        
+
         let service = SyncService::new(Clone::clone(&repository), filesystem.clone());
         (service, repository, filesystem)
     }
@@ -184,7 +196,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_not_initialized() {
         let (service, _, _) = create_test_service();
-        
+
         let result = service.sync(false).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not initialized"));
@@ -193,10 +205,10 @@ mod tests {
     #[tokio::test]
     async fn test_sync_success() {
         let (service, repository, filesystem) = create_test_service();
-        
+
         // Set up initialized state
         let settings = Settings {
-            repository: RepositoryConfig {
+            repository: Repository {
                 remote: "https://github.com/user/dotfiles".to_string(),
                 branch: None,
                 local: None,
@@ -204,18 +216,18 @@ mod tests {
             last_sync: None,
             initialized_at: Utc::now(),
         };
-        
+
         let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
-        
+
         let result = service.sync(false).await.unwrap();
-        
+
         assert!(!result.had_uncommitted_changes);
         assert_eq!(result.commits_pulled, 0);
         assert_eq!(result.current_branch, "main");
         assert!(result.is_clean_after);
-        
+
         // Verify repository.pull was called
         assert_eq!(repository.get_pull_calls().len(), 1);
     }
@@ -223,7 +235,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_with_uncommitted_changes_without_force() {
         let (service, mut repository, filesystem) = create_test_service();
-        
+
         // Set repository to have uncommitted changes
         repository.set_status_response(RepositoryStatus {
             is_clean: false,
@@ -231,10 +243,10 @@ mod tests {
             behind_count: 0,
             current_branch: "main".to_string(),
         });
-        
+
         // Set up initialized state
         let settings = Settings {
-            repository: RepositoryConfig {
+            repository: Repository {
                 remote: "https://github.com/user/dotfiles".to_string(),
                 branch: None,
                 local: None,
@@ -242,35 +254,40 @@ mod tests {
             last_sync: None,
             initialized_at: Utc::now(),
         };
-        
+
         let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
-        
+
         let result = service.sync(false).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("uncommitted changes"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("uncommitted changes"));
     }
 
     #[tokio::test]
     async fn test_check_sync_status_up_to_date() {
         let (service, _, filesystem) = create_test_service();
-        
+
         // Set up initialized state
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles".to_string(),
-            branch: None,
-            local_path: None,
+            repository: Repository {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: Some(Utc::now()),
             initialized_at: Utc::now(),
         };
-        
+
         let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
-        
+
         let status = service.check_sync_status().await.unwrap();
-        
+
         match status {
             SyncStatus::UpToDate { branch, last_sync } => {
                 assert_eq!(branch, "main");
@@ -283,7 +300,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_sync_status_behind_remote() {
         let (service, mut repository, filesystem) = create_test_service();
-        
+
         // Set repository to be behind remote
         repository.set_status_response(RepositoryStatus {
             is_clean: true,
@@ -291,10 +308,10 @@ mod tests {
             behind_count: 3,
             current_branch: "main".to_string(),
         });
-        
+
         // Set up initialized state
         let settings = Settings {
-            repository: RepositoryConfig {
+            repository: Repository {
                 remote: "https://github.com/user/dotfiles".to_string(),
                 branch: None,
                 local: None,
@@ -302,15 +319,18 @@ mod tests {
             last_sync: None,
             initialized_at: Utc::now(),
         };
-        
+
         let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
-        
+
         let status = service.check_sync_status().await.unwrap();
-        
+
         match status {
-            SyncStatus::BehindRemote { branch, behind_count } => {
+            SyncStatus::BehindRemote {
+                branch,
+                behind_count,
+            } => {
                 assert_eq!(branch, "main");
                 assert_eq!(behind_count, 3);
             }

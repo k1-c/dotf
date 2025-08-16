@@ -9,17 +9,16 @@ pub struct ConfigService<F, P> {
 
 impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
     pub fn new(filesystem: F, prompt: P) -> Self {
-        Self {
-            filesystem,
-            prompt,
-        }
+        Self { filesystem, prompt }
     }
 
     pub async fn show_repository_config(&self) -> DottResult<String> {
         let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
-        
+
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config("Repository configuration file (dott.toml) not found".to_string()));
+            return Err(DottError::Config(
+                "Repository configuration file (dott.toml) not found".to_string(),
+            ));
         }
 
         self.filesystem.read_to_string(&config_path).await
@@ -27,31 +26,38 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
     pub async fn show_settings(&self) -> DottResult<Settings> {
         let settings_path = self.filesystem.dott_settings_path();
-        
+
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Config("Settings file not found. Run 'dott init' first.".to_string()));
+            return Err(DottError::Config(
+                "Settings file not found. Run 'dott init' first.".to_string(),
+            ));
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
         let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
-        
+
         Ok(settings)
     }
 
     pub async fn edit_settings(&self) -> DottResult<()> {
         let settings_path = self.filesystem.dott_settings_path();
-        
+
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Config("Settings file not found. Run 'dott init' first.".to_string()));
+            return Err(DottError::Config(
+                "Settings file not found. Run 'dott init' first.".to_string(),
+            ));
         }
 
         let current_settings = self.show_settings().await?;
-        
+
         // Interactive editing
         println!("📝 Current Settings:");
         println!("Repository URL: {}", current_settings.repository.remote);
-        println!("Initialized: {}", current_settings.initialized_at.format("%Y-%m-%d %H:%M:%S"));
+        println!(
+            "Initialized: {}",
+            current_settings.initialized_at.format("%Y-%m-%d %H:%M:%S")
+        );
         if let Some(last_sync) = current_settings.last_sync {
             println!("Last Sync: {}", last_sync.format("%Y-%m-%d %H:%M:%S"));
         } else {
@@ -59,13 +65,19 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         }
         println!();
 
-        let should_edit = self.prompt.confirm("Do you want to edit the repository URL?").await?;
-        
+        let should_edit = self
+            .prompt
+            .confirm("Do you want to edit the repository URL?")
+            .await?;
+
         if should_edit {
-            let new_url = self.prompt.input(
-                "Enter new repository URL:",
-                Some(&current_settings.repository.remote)
-            ).await?;
+            let new_url = self
+                .prompt
+                .input(
+                    "Enter new repository URL:",
+                    Some(&current_settings.repository.remote),
+                )
+                .await?;
 
             let mut updated_repository = current_settings.repository.clone();
             updated_repository.remote = new_url;
@@ -76,11 +88,14 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
                 initialized_at: current_settings.initialized_at,
             };
 
-            let settings_content = updated_settings.to_toml()
+            let settings_content = updated_settings
+                .to_toml()
                 .map_err(|e| DottError::Serialization(e.to_string()))?;
-            
-            self.filesystem.write(&settings_path, &settings_content).await?;
-            
+
+            self.filesystem
+                .write(&settings_path, &settings_content)
+                .await?;
+
             println!("✅ Settings updated successfully!");
         } else {
             println!("📄 No changes made.");
@@ -91,7 +106,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
     pub async fn validate_config(&self) -> DottResult<ConfigValidationResult> {
         let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
-        
+
         if !self.filesystem.exists(&config_path).await? {
             return Ok(ConfigValidationResult {
                 is_valid: false,
@@ -102,7 +117,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         }
 
         let content = self.filesystem.read_to_string(&config_path).await?;
-        
+
         let config: DottConfig = match toml::from_str(&content) {
             Ok(config) => config,
             Err(e) => {
@@ -120,33 +135,42 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
         // Validate symlinks
         let repo_path = self.filesystem.dott_repo_path();
-        
+
         for (target, source) in &config.symlinks {
             let source_path = format!("{}/{}", repo_path, source);
             if !self.filesystem.exists(&source_path).await? {
                 warnings.push(format!("Symlink source not found: {}", source));
             }
-            
+
             if target.contains("..") {
-                errors.push(format!("Dangerous symlink target (contains '..'): {}", target));
+                errors.push(format!(
+                    "Dangerous symlink target (contains '..'): {}",
+                    target
+                ));
             }
         }
 
         // Validate scripts
         let scripts = &config.scripts;
-        
+
         // Check dependency scripts
         if let Some(ref macos_script) = scripts.deps.macos {
             let full_path = format!("{}/{}", repo_path, macos_script);
             if !self.filesystem.exists(&full_path).await? {
-                warnings.push(format!("Dependencies script not found for macos: {}", macos_script));
+                warnings.push(format!(
+                    "Dependencies script not found for macos: {}",
+                    macos_script
+                ));
             }
         }
-        
+
         if let Some(ref linux_script) = scripts.deps.linux {
             let full_path = format!("{}/{}", repo_path, linux_script);
             if !self.filesystem.exists(&full_path).await? {
-                warnings.push(format!("Dependencies script not found for linux: {}", linux_script));
+                warnings.push(format!(
+                    "Dependencies script not found for linux: {}",
+                    linux_script
+                ));
             }
         }
 
@@ -154,7 +178,10 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         for (name, script_path) in &scripts.custom {
             let full_path = format!("{}/{}", repo_path, script_path);
             if !self.filesystem.exists(&full_path).await? {
-                warnings.push(format!("Custom script '{}' not found: {}", name, script_path));
+                warnings.push(format!(
+                    "Custom script '{}' not found: {}",
+                    name, script_path
+                ));
             }
         }
 
@@ -168,7 +195,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
     pub async fn show_config_summary(&self) -> DottResult<ConfigSummary> {
         let validation = self.validate_config().await?;
-        
+
         if !validation.is_valid {
             return Ok(ConfigSummary {
                 is_valid: false,
@@ -181,7 +208,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         }
 
         let config = validation.config.unwrap();
-        
+
         let symlinks_count = config.symlinks.len();
 
         let mut scripts_count = config.scripts.custom.len();
@@ -234,15 +261,17 @@ pub struct ConfigSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{ScriptsConfig, DepsScripts};
-    use crate::traits::{
-        filesystem::tests::MockFileSystem,
-        prompt::tests::MockPrompt,
-    };
+    use crate::core::config::dott_config::{DepsScripts, ScriptsConfig};
+    use crate::core::config::settings::Repository;
+    use crate::traits::{filesystem::tests::MockFileSystem, prompt::tests::MockPrompt};
     use chrono::Utc;
     use std::collections::HashMap;
 
-    fn create_test_service() -> (ConfigService<MockFileSystem, MockPrompt>, MockFileSystem, MockPrompt) {
+    fn create_test_service() -> (
+        ConfigService<MockFileSystem, MockPrompt>,
+        MockFileSystem,
+        MockPrompt,
+    ) {
         let filesystem = MockFileSystem::new();
         let prompt = MockPrompt::new();
         let service = ConfigService::new(filesystem.clone(), prompt.clone());
@@ -273,13 +302,13 @@ mod tests {
     #[tokio::test]
     async fn test_show_repository_config_success() {
         let (service, filesystem, _) = create_test_service();
-        
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
-        
+
         filesystem.add_file(&config_path, &config_content);
-        
+
         let result = service.show_repository_config().await.unwrap();
         assert!(result.contains("setup"));
         assert!(result.contains("install-linux"));
@@ -288,7 +317,7 @@ mod tests {
     #[tokio::test]
     async fn test_show_repository_config_not_found() {
         let (service, _, _) = create_test_service();
-        
+
         let result = service.show_repository_config().await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
@@ -297,9 +326,9 @@ mod tests {
     #[tokio::test]
     async fn test_show_settings_success() {
         let (service, filesystem, _) = create_test_service();
-        
+
         let settings = Settings {
-            repository: RepositoryConfig {
+            repository: Repository {
                 remote: "https://github.com/user/dotfiles".to_string(),
                 branch: None,
                 local: None,
@@ -307,10 +336,10 @@ mod tests {
             last_sync: Some(Utc::now()),
             initialized_at: Utc::now(),
         };
-        
+
         let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
-        
+
         let result = service.show_settings().await.unwrap();
         assert_eq!(result.repository.remote, "https://github.com/user/dotfiles");
     }
@@ -318,20 +347,23 @@ mod tests {
     #[tokio::test]
     async fn test_validate_config_success() {
         let (service, filesystem, _) = create_test_service();
-        
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
-        
+
         filesystem.add_file(&config_path, &config_content);
-        
+
         // Add source files to avoid warnings
         let repo_path = filesystem.dott_repo_path();
         filesystem.add_file(&format!("{}/vim/vimrc", repo_path), "\" vim config");
         filesystem.add_file(&format!("{}/bash/bashrc", repo_path), "# bash config");
-        filesystem.add_file(&format!("{}/scripts/install-linux.sh", repo_path), "#!/bin/bash");
+        filesystem.add_file(
+            &format!("{}/scripts/install-linux.sh", repo_path),
+            "#!/bin/bash",
+        );
         filesystem.add_file(&format!("{}/scripts/setup.sh", repo_path), "#!/bin/bash");
-        
+
         let result = service.validate_config().await.unwrap();
         assert!(result.is_valid);
         assert!(result.errors.is_empty());
@@ -341,14 +373,14 @@ mod tests {
     #[tokio::test]
     async fn test_validate_config_with_warnings() {
         let (service, filesystem, _) = create_test_service();
-        
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
-        
+
         filesystem.add_file(&config_path, &config_content);
         // Don't add source files to trigger warnings
-        
+
         let result = service.validate_config().await.unwrap();
         assert!(result.is_valid); // Still valid, just warnings
         assert!(result.errors.is_empty());
@@ -359,13 +391,13 @@ mod tests {
     #[tokio::test]
     async fn test_show_config_summary() {
         let (service, filesystem, _) = create_test_service();
-        
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
-        
+
         filesystem.add_file(&config_path, &config_content);
-        
+
         let summary = service.show_config_summary().await.unwrap();
         assert!(summary.is_valid);
         assert_eq!(summary.symlinks_count, 2);

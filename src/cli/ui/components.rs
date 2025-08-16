@@ -1,6 +1,6 @@
 //! High-level UI components combining multiple UI elements
 
-use crate::cli::ui::{Icons, Theme, MessageFormatter, Table, OperationStatus};
+use crate::cli::ui::{Icons, MessageFormatter, OperationStatus, Table, Theme};
 use crate::core::symlinks::SymlinkStatus;
 
 /// High-level UI components for common CLI patterns
@@ -28,24 +28,41 @@ impl UiComponents {
     pub fn welcome_banner(&self, version: &str) -> String {
         format!(
             "{}\n{}\n{}\n{}\n",
-            self.theme.primary("╔══════════════════════════════════════╗"),
-            self.theme.primary(&format!("║  {}  {} {} ║", Icons::ROCKET, "Dott", version)),
-            self.theme.primary("║      Modern Dotfile Management      ║"),
-            self.theme.primary("╚══════════════════════════════════════╝"),
+            self.theme
+                .primary("╔══════════════════════════════════════╗"),
+            self.theme
+                .primary(&format!("║  {}  {} {} ║", Icons::ROCKET, "Dott", version)),
+            self.theme
+                .primary("║      Modern Dotfile Management      ║"),
+            self.theme
+                .primary("╚══════════════════════════════════════╝"),
         )
     }
 
     /// Display repository status summary
-    pub fn repository_status(&self, is_clean: bool, behind: usize, ahead: usize, branch: &str) -> String {
+    pub fn repository_status(
+        &self,
+        is_clean: bool,
+        behind: usize,
+        ahead: usize,
+        branch: &str,
+    ) -> String {
         let mut output = Vec::new();
-        
+
         output.push(self.formatter.section("Repository Status"));
         output.push(self.formatter.key_value("Branch", branch));
-        
+
         if is_clean {
-            output.push(format!("  {}", self.formatter.success("Working tree is clean")));
+            output.push(format!(
+                "  {}",
+                self.formatter.success("Working tree is clean")
+            ));
         } else {
-            output.push(format!("  {}", self.formatter.warning("Working tree has uncommitted changes")));
+            output.push(format!(
+                "  {}",
+                self.formatter
+                    .warning("Working tree has uncommitted changes")
+            ));
         }
 
         if behind > 0 {
@@ -57,7 +74,10 @@ impl UiComponents {
         }
 
         if behind == 0 && ahead == 0 {
-            output.push(format!("  {}", self.formatter.success("Up to date with remote")));
+            output.push(format!(
+                "  {}",
+                self.formatter.success("Up to date with remote")
+            ));
         }
 
         output.join("\n")
@@ -69,8 +89,8 @@ impl UiComponents {
             return self.formatter.info("No symlinks configured");
         }
 
-        let mut table = Table::new()
-            .headers_from_strings(&["Status", "Target", "Source", "Details"]);
+        let mut table =
+            Table::new().headers_from_strings(&["Status", "Target", "Source", "Details"]);
 
         for symlink in symlinks {
             let (status_icon, status_text) = match symlink.status {
@@ -78,14 +98,16 @@ impl UiComponents {
                 SymlinkStatus::Missing => (Icons::MISSING, self.theme.error("Missing")),
                 SymlinkStatus::Broken => (Icons::BROKEN, self.theme.error("Broken")),
                 SymlinkStatus::Conflict => (Icons::CONFLICT, self.theme.warning("Conflict")),
-                SymlinkStatus::InvalidTarget => (Icons::INVALID_TARGET, self.theme.warning("Invalid Target")),
+                SymlinkStatus::InvalidTarget => {
+                    (Icons::INVALID_TARGET, self.theme.warning("Invalid Target"))
+                }
                 SymlinkStatus::Modified => (Icons::MODIFIED, self.theme.info("Modified")),
             };
 
             let status_col = format!("{} {}", status_icon, status_text);
             let target_col = self.theme.path(&symlink.target_path);
             let source_col = self.theme.path(&symlink.source_path);
-            
+
             let details_col = match symlink.status {
                 SymlinkStatus::InvalidTarget => {
                     if let Some(ref current_target) = symlink.current_target {
@@ -94,36 +116,33 @@ impl UiComponents {
                         String::new()
                     }
                 }
-                SymlinkStatus::Missing => {
-                    self.theme.muted("Link not created").to_string()
-                }
-                SymlinkStatus::Broken => {
-                    self.theme.muted("Target missing").to_string()
-                }
-                SymlinkStatus::Conflict => {
-                    self.theme.muted("File exists").to_string()
-                }
-                SymlinkStatus::Modified => {
-                    self.theme.muted("Content changed").to_string()
-                }
+                SymlinkStatus::Missing => self.theme.muted("Link not created").to_string(),
+                SymlinkStatus::Broken => self.theme.muted("Target missing").to_string(),
+                SymlinkStatus::Conflict => self.theme.muted("File exists").to_string(),
+                SymlinkStatus::Modified => self.theme.muted("Content changed").to_string(),
                 SymlinkStatus::Valid => {
                     String::new() // 正常な場合は詳細不要
                 }
             };
 
-            table = table.add_row_from_strings(&[
-                &status_col,
-                &target_col,
-                &source_col,
-                &details_col,
-            ]);
+            table =
+                table.add_row_from_strings(&[&status_col, &target_col, &source_col, &details_col]);
         }
 
         format!("{}\n{}", self.formatter.section("Symlinks Status"), table)
     }
 
     /// Display symlink status summary (compact version)
-    pub fn symlinks_status_summary(&self, total: usize, valid: usize, missing: usize, broken: usize, conflicts: usize, invalid_targets: usize, modified: usize) -> String {
+    pub fn symlinks_status_summary(
+        &self,
+        total: usize,
+        valid: usize,
+        missing: usize,
+        broken: usize,
+        conflicts: usize,
+        invalid_targets: usize,
+        modified: usize,
+    ) -> String {
         let total_str = total.to_string();
         let valid_str = format!("{} {}", valid, Icons::SUCCESS);
         let missing_str = format!("{} {}", missing, Icons::ERROR);
@@ -131,12 +150,12 @@ impl UiComponents {
         let conflicts_str = format!("{} {}", conflicts, Icons::WARNING);
         let invalid_targets_str = format!("{} {}", invalid_targets, Icons::INVALID_TARGET);
         let modified_str = format!("{} {}", modified, Icons::MODIFIED);
-        
+
         let mut items = Vec::new();
-        
+
         items.push(("Total", total_str.as_str()));
         items.push(("Valid", valid_str.as_str()));
-        
+
         if missing > 0 {
             items.push(("Missing", missing_str.as_str()));
         }
@@ -157,22 +176,47 @@ impl UiComponents {
     }
 
     /// Display configuration summary
-    pub fn config_summary(&self, is_valid: bool, symlinks_count: usize, scripts_count: usize, platforms: &[String], errors: &[String], warnings: &[String]) -> String {
+    pub fn config_summary(
+        &self,
+        is_valid: bool,
+        symlinks_count: usize,
+        scripts_count: usize,
+        platforms: &[String],
+        errors: &[String],
+        warnings: &[String],
+    ) -> String {
         let mut output = Vec::new();
-        
+
         output.push(self.formatter.section("Configuration Summary"));
-        
+
         if is_valid {
-            output.push(format!("  {}", self.formatter.success("Configuration is valid")));
+            output.push(format!(
+                "  {}",
+                self.formatter.success("Configuration is valid")
+            ));
         } else {
-            output.push(format!("  {}", self.formatter.error("Configuration has issues")));
+            output.push(format!(
+                "  {}",
+                self.formatter.error("Configuration has issues")
+            ));
         }
 
-        output.push(format!("  {}", self.formatter.key_value("Symlinks", &symlinks_count.to_string())));
-        output.push(format!("  {}", self.formatter.key_value("Scripts", &scripts_count.to_string())));
-        
+        output.push(format!(
+            "  {}",
+            self.formatter
+                .key_value("Symlinks", &symlinks_count.to_string())
+        ));
+        output.push(format!(
+            "  {}",
+            self.formatter
+                .key_value("Scripts", &scripts_count.to_string())
+        ));
+
         if !platforms.is_empty() {
-            output.push(format!("  {}", self.formatter.key_value("Platforms", &platforms.join(", "))));
+            output.push(format!(
+                "  {}",
+                self.formatter.key_value("Platforms", &platforms.join(", "))
+            ));
         }
 
         if !errors.is_empty() {
@@ -185,7 +229,11 @@ impl UiComponents {
         if !warnings.is_empty() {
             output.push(format!("\n  {} Warnings:", Icons::WARNING));
             for warning in warnings {
-                output.push(format!("    {} {}", Icons::BULLET, self.theme.warning(warning)));
+                output.push(format!(
+                    "    {} {}",
+                    Icons::BULLET,
+                    self.theme.warning(warning)
+                ));
             }
         }
 
@@ -198,8 +246,8 @@ impl UiComponents {
             return self.formatter.info("No backups found");
         }
 
-        let mut table = Table::new()
-            .headers_from_strings(&["Original Path", "Backup Location", "Created"]);
+        let mut table =
+            Table::new().headers_from_strings(&["Original Path", "Backup Location", "Created"]);
 
         for backup in backups {
             table = table.add_row_from_strings(&[
@@ -215,13 +263,13 @@ impl UiComponents {
     /// Display operation results
     pub fn operation_results(&self, title: &str, results: &[OperationResult]) -> String {
         let mut output = Vec::new();
-        
+
         output.push(self.formatter.section(title));
 
         for result in results {
             let status_display = self.formatter.status(&result.operation, result.status);
             output.push(format!("  {}", status_display));
-            
+
             if let Some(ref details) = result.details {
                 output.push(format!("    {}", self.theme.muted(details)));
             }
@@ -238,9 +286,13 @@ impl UiComponents {
 
         let percentage = (completed as f64 / total as f64 * 100.0) as u8;
         let status = if completed == total {
-            self.formatter.success(&format!("All {} completed", operation))
+            self.formatter
+                .success(&format!("All {} completed", operation))
         } else {
-            self.formatter.info(&format!("{}/{} {} completed ({}%)", completed, total, operation, percentage))
+            self.formatter.info(&format!(
+                "{}/{} {} completed ({}%)",
+                completed, total, operation, percentage
+            ))
         };
 
         status
@@ -249,9 +301,9 @@ impl UiComponents {
     /// Display an error with suggestions
     pub fn error_with_suggestions(&self, error: &str, suggestions: &[&str]) -> String {
         let mut output = Vec::new();
-        
+
         output.push(self.formatter.error(error));
-        
+
         if !suggestions.is_empty() {
             output.push(String::new());
             output.push(self.formatter.info("Suggestions:"));

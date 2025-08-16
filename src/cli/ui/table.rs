@@ -84,7 +84,7 @@ impl Table {
     /// Calculate column widths
     fn calculate_column_widths(&self) -> Vec<usize> {
         let mut widths = Vec::new();
-        
+
         // Initialize with header widths
         if self.show_header {
             for header in &self.headers {
@@ -113,21 +113,28 @@ impl Table {
     }
 
     /// Format a horizontal border
-    fn format_border(&self, widths: &[usize], start: &str, middle: &str, end: &str, fill: &str) -> String {
+    fn format_border(
+        &self,
+        widths: &[usize],
+        start: &str,
+        middle: &str,
+        end: &str,
+        fill: &str,
+    ) -> String {
         if !self.show_borders {
             return String::new();
         }
 
         let mut border = String::new();
         border.push_str(&self.theme.muted(start));
-        
+
         for (i, width) in widths.iter().enumerate() {
             if i > 0 {
                 border.push_str(&self.theme.muted(middle));
             }
             border.push_str(&self.theme.muted(&fill.repeat(width + 2)));
         }
-        
+
         border.push_str(&self.theme.muted(end));
         border
     }
@@ -135,7 +142,7 @@ impl Table {
     /// Format a table row
     fn format_row(&self, cells: &[String], widths: &[usize], is_header: bool) -> String {
         let mut row = String::new();
-        
+
         if self.show_borders {
             row.push_str(&self.theme.muted("│"));
         }
@@ -151,7 +158,7 @@ impl Table {
             let width = widths[i];
             let content_length = display_width(cell);
             let padding = width.saturating_sub(content_length);
-            
+
             if self.show_borders {
                 row.push(' ');
             }
@@ -162,10 +169,10 @@ impl Table {
             } else {
                 row.push_str(cell);
             }
-            
+
             // Add padding to reach column width
             row.push_str(&" ".repeat(padding));
-            
+
             if self.show_borders {
                 row.push(' ');
             }
@@ -182,7 +189,7 @@ impl Table {
 impl fmt::Display for Table {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let widths = self.calculate_column_widths();
-        
+
         // Top border
         if self.show_borders {
             writeln!(f, "{}", self.format_border(&widths, "┌", "┬", "┐", "─"))?;
@@ -191,7 +198,7 @@ impl fmt::Display for Table {
         // Header
         if self.show_header && !self.headers.is_empty() {
             writeln!(f, "{}", self.format_row(&self.headers, &widths, true))?;
-            
+
             if self.show_borders {
                 writeln!(f, "{}", self.format_border(&widths, "├", "┼", "┤", "─"))?;
             }
@@ -200,7 +207,7 @@ impl fmt::Display for Table {
         // Rows
         for (i, row) in self.rows.iter().enumerate() {
             writeln!(f, "{}", self.format_row(&row.cells, &widths, false))?;
-            
+
             // Separator between rows (optional)
             if self.show_borders && i < self.rows.len() - 1 {
                 // Uncomment to add separators between all rows
@@ -293,13 +300,13 @@ impl Default for List {
 fn strip_ansi_codes(s: &str) -> String {
     let mut result = String::new();
     let mut chars = s.chars().peekable();
-    
+
     while let Some(ch) = chars.next() {
         if ch == '\x1b' {
             // Check if this is the start of an ANSI escape sequence
             if chars.peek() == Some(&'[') {
                 chars.next(); // consume '['
-                
+
                 // Skip the entire escape sequence
                 // ANSI escape sequences end with a letter (A-Za-z)
                 while let Some(next_ch) = chars.next() {
@@ -319,7 +326,7 @@ fn strip_ansi_codes(s: &str) -> String {
             result.push(ch);
         }
     }
-    
+
     result
 }
 
@@ -328,10 +335,10 @@ fn display_width(s: &str) -> usize {
     let clean = strip_ansi_codes(s);
     let mut width = 0;
     let mut chars = clean.chars();
-    
+
     while let Some(ch) = chars.next() {
         let ch_str = ch.to_string();
-        
+
         // Check for common emoji sequences that take 2 terminal columns
         if matches!(ch_str.as_str(), "✅" | "❌" | "💥" | "🎯" | "🔄") {
             width += 2;
@@ -351,7 +358,7 @@ fn display_width(s: &str) -> usize {
             width += 1;
         }
     }
-    
+
     width
 }
 
@@ -363,7 +370,10 @@ mod tests {
     fn test_ansi_stripping() {
         assert_eq!(strip_ansi_codes("hello"), "hello");
         assert_eq!(strip_ansi_codes("\x1b[31mred\x1b[0m"), "red");
-        assert_eq!(strip_ansi_codes("\x1b[1;32mbold green\x1b[0m"), "bold green");
+        assert_eq!(
+            strip_ansi_codes("\x1b[1;32mbold green\x1b[0m"),
+            "bold green"
+        );
         assert_eq!(strip_ansi_codes("✅ Valid"), "✅ Valid");
     }
 }

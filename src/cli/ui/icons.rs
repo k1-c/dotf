@@ -60,7 +60,8 @@ impl Icons {
     pub const TREE_PIPE: &'static str = "│";
 
     // Progress
-    pub const SPINNER_FRAMES: &'static [&'static str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    pub const SPINNER_FRAMES: &'static [&'static str] =
+        &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     pub const PROGRESS_FULL: &'static str = "█";
     pub const PROGRESS_EMPTY: &'static str = "░";
 

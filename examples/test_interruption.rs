@@ -1,6 +1,6 @@
 //! Test interruption handling manually
 
-use dott::cli::ui::{InterruptionHandler, InterruptionContext};
+use dott::cli::ui::{InterruptionContext, InterruptionHandler};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -8,10 +8,10 @@ use tokio::time::sleep;
 async fn main() {
     println!("🧪 Testing interruption handling...");
     println!("Press Ctrl+C within 5 seconds to see the interruption message");
-    
+
     let handler = InterruptionHandler::new();
     let interrupted = handler.setup_handlers().await;
-    
+
     // Simulate a long-running operation
     let long_operation = async {
         for i in 1..=5 {
@@ -20,7 +20,7 @@ async fn main() {
         }
         println!("✅ Operation completed successfully!");
     };
-    
+
     // Make it cancellable
     tokio::select! {
         _ = long_operation => {

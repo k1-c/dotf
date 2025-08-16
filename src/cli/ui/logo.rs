@@ -63,9 +63,14 @@ impl Logo {
         format!(
             "{}\n{}\n{}\n{}\n",
             self.compact_logo(),
-            self.theme.muted(&format!("{}   Modern Dotfile Management Tool", " ".repeat(8))),
-            self.theme.muted(&format!("{}   Version {}", " ".repeat(8), version)),
-            self.theme.accent(&format!("{}   {}", " ".repeat(8), self.dots_pattern()))
+            self.theme.muted(&format!(
+                "{}   Modern Dotfile Management Tool",
+                " ".repeat(8)
+            )),
+            self.theme
+                .muted(&format!("{}   Version {}", " ".repeat(8), version)),
+            self.theme
+                .accent(&format!("{}   {}", " ".repeat(8), self.dots_pattern()))
         )
     }
 
@@ -171,20 +176,17 @@ impl InstallAnimation {
     /// Show the welcome screen with logo
     pub async fn show_welcome(&self, version: &str) {
         println!("{}", self.logo.welcome_banner(version));
-        self.typewriter_effect("Initializing dott configuration...", 30).await;
+        self.typewriter_effect("Initializing dott configuration...", 30)
+            .await;
         sleep(Duration::from_millis(500)).await;
     }
 
     /// Show a stage with animation
     pub async fn show_stage(&self, stage: &InstallStage) {
-        let stage_text = format!(
-            "{} {}",
-            stage.icon(),
-            self.theme.primary(stage.message())
-        );
-        
+        let stage_text = format!("{} {}", stage.icon(), self.theme.primary(stage.message()));
+
         println!("\n{}", stage_text);
-        
+
         // Add loading animation only for stages that actually process something
         match stage {
             InstallStage::SelectingBranch => {
@@ -202,15 +204,27 @@ impl InstallAnimation {
         println!("\n{}", "=".repeat(60));
         println!("{}", self.theme.success("🎉 Setup Complete! 🎉"));
         println!("{}", "=".repeat(60));
-        
+
         println!("\n{}", self.theme.accent("Repository:"));
         println!("  {}", self.theme.value(repo_url));
-        
+
         println!("\n{}", self.theme.accent("What's next?"));
-        println!("  {} {}", self.theme.primary("→"), "Run 'dott status' to see your setup");
-        println!("  {} {}", self.theme.primary("→"), "Run 'dott install config' to create symlinks");
-        println!("  {} {}", self.theme.primary("→"), "Run 'dott sync' to sync with remote");
-        
+        println!(
+            "  {} {}",
+            self.theme.primary("→"),
+            "Run 'dott status' to see your setup"
+        );
+        println!(
+            "  {} {}",
+            self.theme.primary("→"),
+            "Run 'dott install config' to create symlinks"
+        );
+        println!(
+            "  {} {}",
+            self.theme.primary("→"),
+            "Run 'dott sync' to sync with remote"
+        );
+
         println!("\n{}", self.theme.muted("Happy dotfile management! ✨"));
     }
 
@@ -241,13 +255,9 @@ impl InstallAnimation {
         let width = 30;
         let filled = (current * width) / total;
         let empty = width - filled;
-        
-        let bar = format!(
-            "{}{}",
-            "█".repeat(filled),
-            "░".repeat(empty)
-        );
-        
+
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
+
         format!(
             "[{}] {}/{} {}",
             self.theme.primary(&bar),

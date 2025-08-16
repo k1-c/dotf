@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use crate::core::{
     config::DottConfig,
-    symlinks::{SymlinkManager, SymlinkOperation, BackupEntry},
+    symlinks::{BackupEntry, SymlinkManager, SymlinkOperation},
 };
 use crate::error::{DottError, DottResult};
 use crate::traits::{
     filesystem::FileSystem,
     prompt::Prompt,
-    script_executor::{ScriptExecutor, ExecutionResult},
+    script_executor::{ExecutionResult, ScriptExecutor},
 };
 
 pub struct InstallService<F, S, P> {
@@ -43,23 +43,31 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
             "macos" => config.scripts.deps.macos,
             "linux" => config.scripts.deps.linux,
             _ => {
-                return Err(DottError::Platform(format!("Unsupported platform: {}", platform)));
+                return Err(DottError::Platform(format!(
+                    "Unsupported platform: {}",
+                    platform
+                )));
             }
         };
 
         if let Some(script) = script_path {
             let full_script_path = format!("{}/{}", self.filesystem.dott_repo_path(), script);
-            
+
             if !self.filesystem.exists(&full_script_path).await? {
                 return Err(DottError::ScriptExecution(format!(
-                    "Dependency script not found: {}", full_script_path
+                    "Dependency script not found: {}",
+                    full_script_path
                 )));
             }
 
-            self.execute_script(&full_script_path, "dependency installation").await?;
+            self.execute_script(&full_script_path, "dependency installation")
+                .await?;
             println!(" Dependencies installed successfully");
         } else {
-            println!("9  No dependency script configured for platform: {}", platform);
+            println!(
+                "9  No dependency script configured for platform: {}",
+                platform
+            );
         }
 
         Ok(())
@@ -107,10 +115,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         }
 
         // Create symlinks (with interactive conflict resolution)
-        let backup_entries = self.symlink_manager.create_symlinks(&operations, true).await?;
+        let backup_entries = self
+            .symlink_manager
+            .create_symlinks(&operations, true)
+            .await?;
 
         println!(" Installed {} symlinks", operations.len());
-        
+
         // Display the list of created symlinks
         println!("\n📋 Symlinks created:");
         for operation in &operations {
@@ -126,23 +137,30 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
     pub async fn install_custom(&self, script_name: &str) -> DottResult<ExecutionResult> {
         let config = self.load_config().await?;
 
-        let script_path = config.scripts.custom.get(script_name)
-            .ok_or_else(|| DottError::Config(format!("Custom script '{}' not found", script_name)))?;
+        let script_path = config.scripts.custom.get(script_name).ok_or_else(|| {
+            DottError::Config(format!("Custom script '{}' not found", script_name))
+        })?;
 
         let full_script_path = format!("{}/{}", self.filesystem.dott_repo_path(), script_path);
 
         if !self.filesystem.exists(&full_script_path).await? {
             return Err(DottError::ScriptExecution(format!(
-                "Custom script file not found: {}", full_script_path
+                "Custom script file not found: {}",
+                full_script_path
             )));
         }
 
         println!("=� Executing custom script: {}", script_name);
-        
-        let result = self.execute_script(&full_script_path, &format!("custom script '{}'", script_name)).await?;
-        
+
+        let result = self
+            .execute_script(
+                &full_script_path,
+                &format!("custom script '{}'", script_name),
+            )
+            .await?;
+
         println!(" Custom script '{}' completed successfully", script_name);
-        
+
         Ok(result)
     }
 
@@ -152,10 +170,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         // 1. Install dependencies first
         if let Err(e) = self.install_dependencies().await {
             eprintln!("�  Dependency installation failed: {}", e);
-            let should_continue = self.prompt.confirm(
-                "Dependency installation failed. Continue with configuration installation?"
-            ).await?;
-            
+            let should_continue = self
+                .prompt
+                .confirm(
+                    "Dependency installation failed. Continue with configuration installation?",
+                )
+                .await?;
+
             if !should_continue {
                 return Err(e);
             }
@@ -172,15 +193,17 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
                 println!("  - {} ({})", name, path);
             }
 
-            let should_run_custom = self.prompt.confirm(
-                "Would you like to run any custom scripts?"
-            ).await?;
+            let should_run_custom = self
+                .prompt
+                .confirm("Would you like to run any custom scripts?")
+                .await?;
 
             if should_run_custom {
                 for script_name in config.scripts.custom.keys() {
-                    let should_run = self.prompt.confirm(
-                        &format!("Run custom script '{}'?", script_name)
-                    ).await?;
+                    let should_run = self
+                        .prompt
+                        .confirm(&format!("Run custom script '{}'?", script_name))
+                        .await?;
 
                     if should_run {
                         if let Err(e) = self.install_custom(script_name).await {
@@ -275,9 +298,11 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 
     async fn load_config(&self) -> DottResult<DottConfig> {
         let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
-        
+
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config("dott.toml not found in repository".to_string()));
+            return Err(DottError::Config(
+                "dott.toml not found in repository".to_string(),
+            ));
         }
 
         let content = self.filesystem.read_to_string(&config_path).await?;
@@ -287,15 +312,19 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(config)
     }
 
-    async fn create_symlink_operations(&self, symlinks: &HashMap<String, String>) -> DottResult<Vec<SymlinkOperation>> {
+    async fn create_symlink_operations(
+        &self,
+        symlinks: &HashMap<String, String>,
+    ) -> DottResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
         let repo_path = self.filesystem.dott_repo_path();
 
         for (target, source) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
-                let home = dirs::home_dir()
-                    .ok_or_else(|| DottError::Operation("Could not determine home directory".to_string()))?;
+                let home = dirs::home_dir().ok_or_else(|| {
+                    DottError::Operation("Could not determine home directory".to_string())
+                })?;
                 target.replacen("~", &home.to_string_lossy(), 1)
             } else {
                 target.clone()
@@ -317,10 +346,17 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(operations)
     }
 
-    async fn execute_script(&self, script_path: &str, operation: &str) -> DottResult<ExecutionResult> {
+    async fn execute_script(
+        &self,
+        script_path: &str,
+        operation: &str,
+    ) -> DottResult<ExecutionResult> {
         // Check if script exists
         if !self.filesystem.exists(script_path).await? {
-            return Err(DottError::ScriptExecution(format!("Script not found: {}", script_path)));
+            return Err(DottError::ScriptExecution(format!(
+                "Script not found: {}",
+                script_path
+            )));
         }
 
         // Check if script is executable
@@ -350,13 +386,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
     fn detect_platform(&self) -> String {
         #[cfg(target_os = "macos")]
         return "macos".to_string();
-        
+
         #[cfg(target_os = "linux")]
         return "linux".to_string();
-        
+
         #[cfg(target_os = "windows")]
         return "windows".to_string();
-        
+
         #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         return "unknown".to_string();
     }
@@ -365,7 +401,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{ScriptsConfig, DepsScripts, PlatformConfig};
+    use crate::core::config::dott_config::{DepsScripts, PlatformConfig, ScriptsConfig};
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         prompt::tests::MockPrompt,
@@ -403,19 +439,28 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Setup dependency script
-        let script_path = format!("{}/scripts/install-deps-linux.sh", filesystem.dott_repo_path());
+        let script_path = format!(
+            "{}/scripts/install-deps-linux.sh",
+            filesystem.dott_repo_path()
+        );
         filesystem.add_file(&script_path, "#!/bin/bash\necho 'Installing dependencies'");
         script_executor.set_permission(&script_path, true);
-        script_executor.set_execution_result(&script_path, ExecutionResult::success("Dependencies installed".to_string()));
+        script_executor.set_execution_result(
+            &script_path,
+            ExecutionResult::success("Dependencies installed".to_string()),
+        );
 
         let service = InstallService::new(filesystem, script_executor.clone(), prompt);
         let result = service.install_dependencies().await;
 
         assert!(result.is_ok());
-        
+
         let executed = script_executor.get_executed_scripts();
         assert_eq!(executed.len(), 1);
         assert_eq!(executed[0].0, script_path);
@@ -430,7 +475,10 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Don't create the script file
 
@@ -450,11 +498,20 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Setup source files
-        filesystem.add_file(&format!("{}/.vimrc", filesystem.dott_repo_path()), "set number");
-        filesystem.add_file(&format!("{}/.bashrc", filesystem.dott_repo_path()), "alias ll='ls -la'");
+        filesystem.add_file(
+            &format!("{}/.vimrc", filesystem.dott_repo_path()),
+            "set number",
+        );
+        filesystem.add_file(
+            &format!("{}/.bashrc", filesystem.dott_repo_path()),
+            "alias ll='ls -la'",
+        );
 
         let service = InstallService::new(filesystem.clone(), script_executor, prompt);
         let result = service.install_config().await;
@@ -467,7 +524,7 @@ mod tests {
         let home = dirs::home_dir().unwrap();
         let vimrc_target = format!("{}/.vimrc", home.to_string_lossy());
         let bashrc_target = format!("{}/.bashrc", home.to_string_lossy());
-        
+
         assert!(filesystem.exists(&vimrc_target).await.unwrap());
         assert!(filesystem.exists(&bashrc_target).await.unwrap());
     }
@@ -481,11 +538,17 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Only create one source file (.vimrc), missing .bashrc
 
-        filesystem.add_file(&format!("{}/.vimrc", filesystem.dott_repo_path()), "set number");
+        filesystem.add_file(
+            &format!("{}/.vimrc", filesystem.dott_repo_path()),
+            "set number",
+        );
 
         let service = InstallService::new(filesystem, script_executor, prompt);
         let result = service.install_config().await;
@@ -503,19 +566,25 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Setup custom script
         let script_path = format!("{}/scripts/setup-vim.sh", filesystem.dott_repo_path());
         filesystem.add_file(&script_path, "#!/bin/bash\necho 'Setting up Vim'");
         script_executor.set_permission(&script_path, true);
-        script_executor.set_execution_result(&script_path, ExecutionResult::success("Vim setup complete".to_string()));
+        script_executor.set_execution_result(
+            &script_path,
+            ExecutionResult::success("Vim setup complete".to_string()),
+        );
 
         let service = InstallService::new(filesystem, script_executor.clone(), prompt);
         let result = service.install_custom("setup-vim").await;
 
         assert!(result.is_ok());
-        
+
         let executed = script_executor.get_executed_scripts();
         assert_eq!(executed.len(), 1);
         assert_eq!(executed[0].0, script_path);
@@ -530,7 +599,10 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         let service = InstallService::new(filesystem, script_executor, prompt);
         let result = service.install_custom("nonexistent-script").await;
@@ -548,21 +620,36 @@ mod tests {
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
-        filesystem.add_file(&format!("{}/dott.toml", filesystem.dott_repo_path()), &config_content);
+        filesystem.add_file(
+            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &config_content,
+        );
 
         // Create existing symlinks
         let home = dirs::home_dir().unwrap();
         let vimrc_target = format!("{}/.vimrc", home.to_string_lossy());
         let bashrc_target = format!("{}/.bashrc", home.to_string_lossy());
-        
-        filesystem.create_symlink(&format!("{}/.vimrc", filesystem.dott_repo_path()), &vimrc_target).await.unwrap();
-        filesystem.create_symlink(&format!("{}/.bashrc", filesystem.dott_repo_path()), &bashrc_target).await.unwrap();
+
+        filesystem
+            .create_symlink(
+                &format!("{}/.vimrc", filesystem.dott_repo_path()),
+                &vimrc_target,
+            )
+            .await
+            .unwrap();
+        filesystem
+            .create_symlink(
+                &format!("{}/.bashrc", filesystem.dott_repo_path()),
+                &bashrc_target,
+            )
+            .await
+            .unwrap();
 
         let service = InstallService::new(filesystem.clone(), script_executor, prompt);
         let result = service.uninstall_config().await;
 
         assert!(result.is_ok());
-        
+
         // Check that symlinks were removed
         assert!(!filesystem.exists(&vimrc_target).await.unwrap());
         assert!(!filesystem.exists(&bashrc_target).await.unwrap());

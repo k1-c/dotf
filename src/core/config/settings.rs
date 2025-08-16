@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::error::DottResult;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Settings {
@@ -47,8 +47,12 @@ impl Settings {
             initialized_at: chrono::Utc::now(),
         }
     }
-    
-    pub fn new_with_details(repository_url: &str, branch: Option<String>, local_path: Option<String>) -> Self {
+
+    pub fn new_with_details(
+        repository_url: &str,
+        branch: Option<String>,
+        local_path: Option<String>,
+    ) -> Self {
         Self {
             repository: Repository {
                 remote: repository_url.to_string(),
@@ -59,11 +63,11 @@ impl Settings {
             initialized_at: chrono::Utc::now(),
         }
     }
-    
+
     pub fn from_toml(toml: &str) -> DottResult<Self> {
         toml::from_str(toml).map_err(|e| e.into())
     }
-    
+
     pub fn to_toml(&self) -> DottResult<String> {
         toml::to_string_pretty(self).map_err(|e| e.into())
     }
@@ -72,31 +76,34 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_settings_default() {
         let settings = Settings::default();
         assert!(settings.repository.remote.is_empty());
         assert!(settings.last_sync.is_none());
     }
-    
+
     #[test]
     fn test_settings_new() {
         let settings = Settings::new("https://github.com/user/dotfiles.git");
-        assert_eq!(settings.repository.remote, "https://github.com/user/dotfiles.git");
+        assert_eq!(
+            settings.repository.remote,
+            "https://github.com/user/dotfiles.git"
+        );
         assert!(settings.last_sync.is_none());
     }
-    
+
     #[test]
     fn test_settings_serialization() {
         let settings = Settings::new_with_details(
             "https://github.com/user/dotfiles.git",
             Some("main".to_string()),
-            Some("/home/user/dotfiles".to_string())
+            Some("/home/user/dotfiles".to_string()),
         );
         let toml = settings.to_toml().unwrap();
         let deserialized = Settings::from_toml(&toml).unwrap();
-        
+
         assert_eq!(settings.repository.remote, deserialized.repository.remote);
         assert_eq!(settings.repository.branch, deserialized.repository.branch);
         assert_eq!(settings.repository.local, deserialized.repository.local);

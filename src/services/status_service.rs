@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::core::{
     config::{DottConfig, Settings},
-    symlinks::{SymlinkManager, SymlinkStatus, SymlinkOperation},
+    symlinks::{SymlinkManager, SymlinkOperation, SymlinkStatus},
 };
 use crate::error::{DottError, DottResult};
 use crate::traits::{
@@ -73,15 +73,21 @@ struct ConsolePrompt;
 #[async_trait]
 impl Prompt for ConsolePrompt {
     async fn input(&self, _message: &str, _default: Option<&str>) -> DottResult<String> {
-        Err(DottError::Operation("Prompt not available in status service".to_string()))
+        Err(DottError::Operation(
+            "Prompt not available in status service".to_string(),
+        ))
     }
 
     async fn confirm(&self, _message: &str) -> DottResult<bool> {
-        Err(DottError::Operation("Prompt not available in status service".to_string()))
+        Err(DottError::Operation(
+            "Prompt not available in status service".to_string(),
+        ))
     }
 
     async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DottResult<usize> {
-        Err(DottError::Operation("Prompt not available in status service".to_string()))
+        Err(DottError::Operation(
+            "Prompt not available in status service".to_string(),
+        ))
     }
 }
 
@@ -139,7 +145,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     pub async fn get_repository_status(&self) -> DottResult<RepositoryStatusInfo> {
         let settings = self.load_settings().await?;
         let repo_path = self.filesystem.dott_repo_path();
-        
+
         let status = self.repository.get_status(&repo_path).await?;
 
         Ok(RepositoryStatusInfo {
@@ -188,7 +194,10 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
 
         let operations = self.create_symlink_operations(&symlinks).await?;
         let repo_path = self.filesystem.dott_repo_path();
-        let symlink_infos = self.symlink_manager.get_symlink_status_with_changes(&operations, &self.repository, &repo_path).await?;
+        let symlink_infos = self
+            .symlink_manager
+            .get_symlink_status_with_changes(&operations, &self.repository, &repo_path)
+            .await?;
 
         let mut status_info = SymlinksStatusInfo {
             total: symlink_infos.len(),
@@ -251,7 +260,8 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
             }
         };
 
-        let has_platform_config = config.platform.macos.is_some() || config.platform.linux.is_some();
+        let has_platform_config =
+            config.platform.macos.is_some() || config.platform.linux.is_some();
 
         Ok(ConfigStatusInfo {
             valid: errors.is_empty(),
@@ -278,17 +288,23 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
             println!("   URL: {}", repo.url);
             println!("   Path: {}", repo.path);
             println!("   Branch: {}", repo.status.current_branch);
-            println!("   Clean: {}", if repo.status.is_clean { "✅" } else { "❌" });
-            
+            println!(
+                "   Clean: {}",
+                if repo.status.is_clean { "✅" } else { "❌" }
+            );
+
             if repo.status.ahead_count > 0 {
                 println!("   Ahead: {} commits", repo.status.ahead_count);
             }
             if repo.status.behind_count > 0 {
                 println!("   Behind: {} commits", repo.status.behind_count);
             }
-            
+
             if let Some(last_sync) = repo.last_sync {
-                println!("   Last sync: {}", last_sync.format("%Y-%m-%d %H:%M:%S UTC"));
+                println!(
+                    "   Last sync: {}",
+                    last_sync.format("%Y-%m-%d %H:%M:%S UTC")
+                );
             } else {
                 println!("   Last sync: Never");
             }
@@ -301,14 +317,14 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     async fn is_initialized(&self) -> DottResult<bool> {
         let settings_path = self.filesystem.dott_settings_path();
         let repo_path = self.filesystem.dott_repo_path();
-        
-        Ok(self.filesystem.exists(&settings_path).await? && 
-           self.filesystem.exists(&repo_path).await?)
+
+        Ok(self.filesystem.exists(&settings_path).await?
+            && self.filesystem.exists(&repo_path).await?)
     }
 
     async fn load_settings(&self) -> DottResult<Settings> {
         let settings_path = self.filesystem.dott_settings_path();
-        
+
         if !self.filesystem.exists(&settings_path).await? {
             return Err(DottError::NotInitialized);
         }
@@ -322,9 +338,11 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
 
     async fn load_config(&self) -> DottResult<DottConfig> {
         let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
-        
+
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config("dott.toml not found in repository".to_string()));
+            return Err(DottError::Config(
+                "dott.toml not found in repository".to_string(),
+            ));
         }
 
         let content = self.filesystem.read_to_string(&config_path).await?;
@@ -334,15 +352,19 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         Ok(config)
     }
 
-    async fn create_symlink_operations(&self, symlinks: &HashMap<String, String>) -> DottResult<Vec<SymlinkOperation>> {
+    async fn create_symlink_operations(
+        &self,
+        symlinks: &HashMap<String, String>,
+    ) -> DottResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
         let repo_path = self.filesystem.dott_repo_path();
 
         for (target, source) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
-                let home = dirs::home_dir()
-                    .ok_or_else(|| DottError::Operation("Could not determine home directory".to_string()))?;
+                let home = dirs::home_dir().ok_or_else(|| {
+                    DottError::Operation("Could not determine home directory".to_string())
+                })?;
                 target.replacen("~", &home.to_string_lossy(), 1)
             } else {
                 target.clone()
@@ -367,13 +389,13 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     fn detect_platform(&self) -> String {
         #[cfg(target_os = "macos")]
         return "macos".to_string();
-        
+
         #[cfg(target_os = "linux")]
         return "linux".to_string();
-        
+
         #[cfg(target_os = "windows")]
         return "windows".to_string();
-        
+
         #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         return "unknown".to_string();
     }

@@ -103,6 +103,8 @@ impl Theme {
 
     /// Style text as a command
     pub fn command(&self, text: &str) -> String {
-        text.color(self.accent).on_color(Color::BrightBlack).to_string()
+        text.color(self.accent)
+            .on_color(Color::BrightBlack)
+            .to_string()
     }
 }

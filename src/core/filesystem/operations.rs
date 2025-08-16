@@ -22,7 +22,8 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn create_dir_all(&self, path: &str) -> DottResult<()> {
-        fs::create_dir_all(path).await
+        fs::create_dir_all(path)
+            .await
             .map_err(|e| DottError::Io(e))?;
         Ok(())
     }
@@ -37,21 +38,23 @@ impl FileSystem for RealFileSystem {
 
         #[cfg(unix)]
         {
-            tokio::fs::symlink(source, target).await
+            tokio::fs::symlink(source, target)
+                .await
                 .map_err(|e| DottError::Io(e))?;
         }
 
         #[cfg(windows)]
         {
             // On Windows, we need to check if source is a directory or file
-            let source_metadata = fs::metadata(source).await
-                .map_err(|e| DottError::Io(e))?;
-            
+            let source_metadata = fs::metadata(source).await.map_err(|e| DottError::Io(e))?;
+
             if source_metadata.is_dir() {
-                tokio::fs::symlink_dir(source, target).await
+                tokio::fs::symlink_dir(source, target)
+                    .await
                     .map_err(|e| DottError::Io(e))?;
             } else {
-                tokio::fs::symlink_file(source, target).await
+                tokio::fs::symlink_file(source, target)
+                    .await
                     .map_err(|e| DottError::Io(e))?;
             }
         }
@@ -60,22 +63,24 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn remove_file(&self, path: &str) -> DottResult<()> {
-        let metadata = fs::symlink_metadata(path).await
+        let metadata = fs::symlink_metadata(path)
+            .await
             .map_err(|e| DottError::Io(e))?;
 
         if metadata.is_dir() {
-            fs::remove_dir_all(path).await
+            fs::remove_dir_all(path)
+                .await
                 .map_err(|e| DottError::Io(e))?;
         } else {
-            fs::remove_file(path).await
-                .map_err(|e| DottError::Io(e))?;
+            fs::remove_file(path).await.map_err(|e| DottError::Io(e))?;
         }
 
         Ok(())
     }
 
     async fn remove_dir(&self, path: &str) -> DottResult<()> {
-        fs::remove_dir_all(path).await
+        fs::remove_dir_all(path)
+            .await
             .map_err(|e| DottError::Io(e))?;
         Ok(())
     }
@@ -88,14 +93,14 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        fs::copy(source, target).await
+        fs::copy(source, target)
+            .await
             .map_err(|e| DottError::Io(e))?;
         Ok(())
     }
 
     async fn read_to_string(&self, path: &str) -> DottResult<String> {
-        fs::read_to_string(path).await
-            .map_err(|e| DottError::Io(e))
+        fs::read_to_string(path).await.map_err(|e| DottError::Io(e))
     }
 
     async fn write(&self, path: &str, content: &str) -> DottResult<()> {
@@ -106,28 +111,27 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        let mut file = fs::File::create(path).await
+        let mut file = fs::File::create(path).await.map_err(|e| DottError::Io(e))?;
+
+        file.write_all(content.as_bytes())
+            .await
             .map_err(|e| DottError::Io(e))?;
-        
-        file.write_all(content.as_bytes()).await
-            .map_err(|e| DottError::Io(e))?;
-        
-        file.flush().await
-            .map_err(|e| DottError::Io(e))?;
+
+        file.flush().await.map_err(|e| DottError::Io(e))?;
 
         Ok(())
     }
 
     async fn is_symlink(&self, path: &str) -> DottResult<bool> {
-        let metadata = fs::symlink_metadata(path).await
+        let metadata = fs::symlink_metadata(path)
+            .await
             .map_err(|e| DottError::Io(e))?;
-        
+
         Ok(metadata.file_type().is_symlink())
     }
 
     async fn read_link(&self, path: &str) -> DottResult<PathBuf> {
-        fs::read_link(path).await
-            .map_err(|e| DottError::Io(e))
+        fs::read_link(path).await.map_err(|e| DottError::Io(e))
     }
 }
 
@@ -140,14 +144,14 @@ mod tests {
     async fn test_real_filesystem_file_operations() {
         let temp_dir = TempDir::new().unwrap();
         let fs = RealFileSystem::new();
-        
+
         let test_file = temp_dir.path().join("test.txt");
         let test_file_str = test_file.to_string_lossy();
 
         // Test file creation and reading
         fs.write(&test_file_str, "Hello, world!").await.unwrap();
         assert!(fs.exists(&test_file_str).await.unwrap());
-        
+
         let content = fs.read_to_string(&test_file_str).await.unwrap();
         assert_eq!(content, "Hello, world!");
 
@@ -160,7 +164,7 @@ mod tests {
     async fn test_real_filesystem_directory_operations() {
         let temp_dir = TempDir::new().unwrap();
         let fs = RealFileSystem::new();
-        
+
         let test_dir = temp_dir.path().join("nested").join("dir");
         let test_dir_str = test_dir.to_string_lossy();
 
@@ -177,10 +181,10 @@ mod tests {
     async fn test_real_filesystem_symlink_operations() {
         let temp_dir = TempDir::new().unwrap();
         let fs = RealFileSystem::new();
-        
+
         let source_file = temp_dir.path().join("source.txt");
         let target_link = temp_dir.path().join("target_link.txt");
-        
+
         let source_str = source_file.to_string_lossy();
         let target_str = target_link.to_string_lossy();
 
@@ -189,7 +193,7 @@ mod tests {
 
         // Create symlink
         fs.create_symlink(&source_str, &target_str).await.unwrap();
-        
+
         assert!(fs.exists(&target_str).await.unwrap());
         assert!(fs.is_symlink(&target_str).await.unwrap());
 
@@ -206,10 +210,10 @@ mod tests {
     async fn test_real_filesystem_copy_file() {
         let temp_dir = TempDir::new().unwrap();
         let fs = RealFileSystem::new();
-        
+
         let source_file = temp_dir.path().join("source.txt");
         let dest_file = temp_dir.path().join("dest.txt");
-        
+
         let source_str = source_file.to_string_lossy();
         let dest_str = dest_file.to_string_lossy();
 
@@ -222,7 +226,7 @@ mod tests {
         // Verify both files exist with same content
         assert!(fs.exists(&source_str).await.unwrap());
         assert!(fs.exists(&dest_str).await.unwrap());
-        
+
         let source_content = fs.read_to_string(&source_str).await.unwrap();
         let dest_content = fs.read_to_string(&dest_str).await.unwrap();
         assert_eq!(source_content, dest_content);
@@ -233,15 +237,15 @@ mod tests {
     async fn test_real_filesystem_nested_directory_creation() {
         let temp_dir = TempDir::new().unwrap();
         let fs = RealFileSystem::new();
-        
+
         let nested_file = temp_dir.path().join("deep").join("nested").join("file.txt");
         let nested_file_str = nested_file.to_string_lossy();
 
         // Write to nested file (should create directories automatically)
         fs.write(&nested_file_str, "Nested content").await.unwrap();
-        
+
         assert!(fs.exists(&nested_file_str).await.unwrap());
-        
+
         let content = fs.read_to_string(&nested_file_str).await.unwrap();
         assert_eq!(content, "Nested content");
     }
@@ -249,13 +253,15 @@ mod tests {
     #[tokio::test]
     async fn test_real_filesystem_error_handling() {
         let fs = RealFileSystem::new();
-        
+
         // Test reading non-existent file
         let result = fs.read_to_string("/nonexistent/file.txt").await;
         assert!(result.is_err());
 
         // Test creating symlink in non-existent directory (this should fail)
-        let result = fs.create_symlink("/tmp/source.txt", "/nonexistent/dir/link.txt").await;
+        let result = fs
+            .create_symlink("/tmp/source.txt", "/nonexistent/dir/link.txt")
+            .await;
         assert!(result.is_err());
     }
 }

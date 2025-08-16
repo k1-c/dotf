@@ -19,18 +19,20 @@ impl SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await
+            let metadata = fs::metadata(script_path)
+                .await
                 .map_err(|e| DottError::Io(e))?;
-            
+
             let permissions = metadata.permissions();
             let mode = permissions.mode();
-            
+
             // Check if executable bit is set (owner execute: 0o100)
             if mode & 0o100 == 0 {
                 // Set executable permission for owner
                 let new_mode = mode | 0o744; // rwxr--r--
                 let new_permissions = std::fs::Permissions::from_mode(new_mode);
-                fs::set_permissions(script_path, new_permissions).await
+                fs::set_permissions(script_path, new_permissions)
+                    .await
                     .map_err(|e| DottError::Io(e))?;
             }
         }
@@ -61,17 +63,24 @@ impl SystemScriptExecutor {
         }
     }
 
-    async fn execute_command(&self, script_path: &str, args: &[String]) -> DottResult<ExecutionResult> {
+    async fn execute_command(
+        &self,
+        script_path: &str,
+        args: &[String],
+    ) -> DottResult<ExecutionResult> {
         let script_extension = std::path::Path::new(script_path)
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
-        let mut command = if script_extension == "sh" || script_extension == "bash" || script_path.starts_with("#!") {
+        let mut command = if script_extension == "sh"
+            || script_extension == "bash"
+            || script_path.starts_with("#!")
+        {
             // Execute shell scripts through shell
             let (shell, shell_arg) = self.get_shell_command();
             let mut cmd = Command::new(shell);
-            
+
             if args.is_empty() {
                 cmd.arg(shell_arg).arg(script_path);
             } else {
@@ -92,13 +101,18 @@ impl SystemScriptExecutor {
             .stderr(Stdio::piped())
             .stdin(Stdio::null());
 
-        let mut child = command.spawn()
+        let mut child = command
+            .spawn()
             .map_err(|e| DottError::ScriptExecution(format!("Failed to spawn process: {}", e)))?;
 
         // Capture output streams
-        let stdout = child.stdout.take()
+        let stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| DottError::ScriptExecution("Failed to capture stdout".to_string()))?;
-        let stderr = child.stderr.take()
+        let stderr = child
+            .stderr
+            .take()
             .ok_or_else(|| DottError::ScriptExecution("Failed to capture stderr".to_string()))?;
 
         // Read output in parallel
@@ -123,13 +137,16 @@ impl SystemScriptExecutor {
         });
 
         // Wait for process to complete
-        let exit_status = child.wait().await
-            .map_err(|e| DottError::ScriptExecution(format!("Failed to wait for process: {}", e)))?;
+        let exit_status = child.wait().await.map_err(|e| {
+            DottError::ScriptExecution(format!("Failed to wait for process: {}", e))
+        })?;
 
         // Collect output
-        let stdout_output = stdout_handle.await
+        let stdout_output = stdout_handle
+            .await
             .map_err(|e| DottError::ScriptExecution(format!("Failed to read stdout: {}", e)))?;
-        let stderr_output = stderr_handle.await
+        let stderr_output = stderr_handle
+            .await
             .map_err(|e| DottError::ScriptExecution(format!("Failed to read stderr: {}", e)))?;
 
         let exit_code = exit_status.code().unwrap_or(-1);
@@ -150,10 +167,17 @@ impl ScriptExecutor for SystemScriptExecutor {
         self.execute_with_args(script_path, &[]).await
     }
 
-    async fn execute_with_args(&self, script_path: &str, args: &[String]) -> DottResult<ExecutionResult> {
+    async fn execute_with_args(
+        &self,
+        script_path: &str,
+        args: &[String],
+    ) -> DottResult<ExecutionResult> {
         // Check if script exists
         if !tokio::fs::metadata(script_path).await.is_ok() {
-            return Err(DottError::ScriptExecution(format!("Script not found: {}", script_path)));
+            return Err(DottError::ScriptExecution(format!(
+                "Script not found: {}",
+                script_path
+            )));
         }
 
         // Ensure script has execute permissions
@@ -169,12 +193,13 @@ impl ScriptExecutor for SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await
+            let metadata = fs::metadata(script_path)
+                .await
                 .map_err(|e| DottError::Io(e))?;
-            
+
             let permissions = metadata.permissions();
             let mode = permissions.mode();
-            
+
             // Check if executable bit is set (owner execute: 0o100)
             Ok(mode & 0o100 != 0)
         }
@@ -186,7 +211,7 @@ impl ScriptExecutor for SystemScriptExecutor {
                 .extension()
                 .and_then(|ext| ext.to_str())
                 .unwrap_or("");
-            
+
             Ok(matches!(script_extension, "exe" | "bat" | "cmd" | "ps1"))
         }
     }
@@ -197,17 +222,19 @@ impl ScriptExecutor for SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await
+            let metadata = fs::metadata(script_path)
+                .await
                 .map_err(|e| DottError::Io(e))?;
-            
+
             let permissions = metadata.permissions();
             let mode = permissions.mode();
-            
+
             // Set executable permission for owner (rwxr--r--)
             let new_mode = mode | 0o744;
             let new_permissions = std::fs::Permissions::from_mode(new_mode);
-            
-            fs::set_permissions(script_path, new_permissions).await
+
+            fs::set_permissions(script_path, new_permissions)
+                .await
                 .map_err(|e| DottError::Io(e))?;
         }
 
@@ -231,11 +258,11 @@ mod tests {
     async fn create_test_script(content: &str, extension: &str) -> (TempDir, String) {
         let temp_dir = TempDir::new().unwrap();
         let script_path = temp_dir.path().join(format!("test_script.{}", extension));
-        
+
         let mut file = fs::File::create(&script_path).await.unwrap();
         file.write_all(content.as_bytes()).await.unwrap();
         file.flush().await.unwrap();
-        
+
         let script_path_str = script_path.to_string_lossy().to_string();
         (temp_dir, script_path_str)
     }
@@ -243,16 +270,16 @@ mod tests {
     #[tokio::test]
     async fn test_system_script_executor_success() {
         let executor = SystemScriptExecutor::new();
-        
+
         let script_content = r#"#!/bin/bash
 echo "Hello from script"
 echo "Success output"
 "#;
-        
+
         let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
-        
+
         let result = executor.execute(&script_path).await.unwrap();
-        
+
         assert!(result.success);
         assert_eq!(result.exit_code, 0);
         assert!(result.stdout.contains("Hello from script"));
@@ -263,16 +290,16 @@ echo "Success output"
     #[tokio::test]
     async fn test_system_script_executor_failure() {
         let executor = SystemScriptExecutor::new();
-        
+
         let script_content = r#"#!/bin/bash
 echo "This will fail"
 exit 1
 "#;
-        
+
         let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
-        
+
         let result = executor.execute(&script_path).await.unwrap();
-        
+
         assert!(!result.success);
         assert_eq!(result.exit_code, 1);
         assert!(result.stdout.contains("This will fail"));
@@ -281,18 +308,21 @@ exit 1
     #[tokio::test]
     async fn test_system_script_executor_with_args() {
         let executor = SystemScriptExecutor::new();
-        
+
         let script_content = r#"#!/bin/bash
 echo "Arg 1: $1"
 echo "Arg 2: $2"
 echo "All args: $@"
 "#;
-        
+
         let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
-        
+
         let args = vec!["first".to_string(), "second".to_string()];
-        let result = executor.execute_with_args(&script_path, &args).await.unwrap();
-        
+        let result = executor
+            .execute_with_args(&script_path, &args)
+            .await
+            .unwrap();
+
         assert!(result.success);
         assert!(result.stdout.contains("Arg 1: first"));
         assert!(result.stdout.contains("Arg 2: second"));
@@ -302,16 +332,16 @@ echo "All args: $@"
     #[tokio::test]
     async fn test_system_script_executor_stderr() {
         let executor = SystemScriptExecutor::new();
-        
+
         let script_content = r#"#!/bin/bash
 echo "stdout message"
 echo "stderr message" >&2
 "#;
-        
+
         let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
-        
+
         let result = executor.execute(&script_path).await.unwrap();
-        
+
         assert!(result.success);
         assert!(result.stdout.contains("stdout message"));
         assert!(result.stderr.contains("stderr message"));
@@ -320,9 +350,9 @@ echo "stderr message" >&2
     #[tokio::test]
     async fn test_system_script_executor_nonexistent_script() {
         let executor = SystemScriptExecutor::new();
-        
+
         let result = executor.execute("/nonexistent/script.sh").await;
-        
+
         assert!(result.is_err());
         if let Err(DottError::ScriptExecution(msg)) = result {
             assert!(msg.contains("Script not found"));
@@ -335,24 +365,24 @@ echo "stderr message" >&2
     #[cfg(unix)]
     async fn test_system_script_executor_permissions() {
         let executor = SystemScriptExecutor::new();
-        
+
         let script_content = r#"#!/bin/bash
 echo "permission test"
 "#;
-        
+
         let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
-        
+
         // Initially should not be executable
         let has_permission = executor.has_permission(&script_path).await.unwrap();
         assert!(!has_permission);
-        
+
         // Make executable
         executor.make_executable(&script_path).await.unwrap();
-        
+
         // Now should be executable
         let has_permission = executor.has_permission(&script_path).await.unwrap();
         assert!(has_permission);
-        
+
         // Should be able to execute
         let result = executor.execute(&script_path).await.unwrap();
         assert!(result.success);
