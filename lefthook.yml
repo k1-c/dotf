@@ -43,13 +43,6 @@ pre-push:
       fail_text: "❌ Documentation build failed."
       stage_fixed: false
       
-    # Optional: Run full CI check script if it exists
-    # ci-check:
-    #   run: ./scripts/ci-check.sh
-    #   fail_text: "❌ CI checks failed."
-    #   skip:
-    #     - rebase
-    #     - merge
 
 pre-commit:
   parallel: true
