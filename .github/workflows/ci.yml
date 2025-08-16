@@ -69,8 +69,11 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
 
-    - name: Run clippy
+    - name: Run clippy (all features)
       run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Run clippy (no features)
+      run: cargo clippy --all-targets --no-default-features -- -D warnings
 
     - name: Build
       run: cargo build --verbose --all-features
@@ -189,7 +192,7 @@ jobs:
     - name: Install Rust toolchain (MSRV)
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: 1.75.0  # Adjust based on your MSRV
+        toolchain: 1.82.0  # Adjust based on your MSRV
 
     - name: Cache cargo registry
       uses: actions/cache@v4
@@ -209,5 +212,52 @@ jobs:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Check MSRV
-      run: cargo check --all-features
+    - name: Check with MSRV
+      run: cargo +1.82.0 check --all-features
+
+    - name: Test with MSRV
+      run: cargo +1.82.0 test --all-features
+
+  unused_dependencies:
+    name: Check Unused Dependencies
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v5
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check for unused dependencies
+      run: |
+        cargo install cargo-machete
+        cargo machete
+
+  license_security:
+    name: License and Security Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v5
+
+    - name: Install cargo-deny
+      run: cargo install cargo-deny
+
+    - name: Run cargo-deny
+      run: cargo deny check
+
+  typos:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v5
+
+    - name: Check for typos
+      uses: crate-ci/typos@master
