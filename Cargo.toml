@@ -56,5 +56,5 @@ chrono = { version = "0.4", features = ["serde"] }
 tokio-test = "0.4"
 tempfile = "3.10"
 assert_matches = "1.5"
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.4"
