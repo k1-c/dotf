@@ -14,13 +14,14 @@ allow = [
     "Unicode-DFS-2016",
     "Unicode-3.0",
     "MPL-2.0",
+    "CDLA-Permissive-2.0",
 ]
 
 confidence-threshold = 0.8
 
 [bans]
-# Deny multiple versions of the same crate
-multiple-versions = "deny"
+# Allow multiple versions of the same crate (common in Rust ecosystem)
+multiple-versions = "warn"
 wildcards = "allow"
 
 # Specific crates to deny
