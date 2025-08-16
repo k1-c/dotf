@@ -26,6 +26,27 @@ pub struct BackupManifest {
     pub entries: HashMap<String, BackupEntry>,
 }
 
+#[derive(Debug)]
+pub struct RestoreResult {
+    pub restored_count: usize,
+    pub failed_restorations: Vec<RestoreError>,
+}
+
+#[derive(Debug)]
+pub struct RestoreError {
+    pub path: String,
+    pub error: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct BackupInfo {
+    pub original_path: String,
+    pub backup_path: String,
+    pub created_at: DateTime<Utc>,
+    pub file_type: BackupFileType,
+    pub size_estimate: String,
+}
+
 impl BackupManifest {
     pub fn new() -> Self {
         Self {
@@ -173,6 +194,105 @@ impl<F: FileSystem> BackupManager<F> {
         
         self.save_manifest(&manifest).await?;
         Ok(())
+    }
+
+    pub async fn restore_specific_backup(&self, original_path: &str) -> DottResult<()> {
+        let entry = self.get_backup_entry(original_path).await?;
+        
+        match entry {
+            Some(backup_entry) => {
+                // Remove current file/symlink if it exists
+                if self.filesystem.exists(original_path).await? {
+                    self.filesystem.remove_file(original_path).await?;
+                }
+                
+                // Restore from backup
+                self.restore_from_backup(&backup_entry).await?;
+                
+                // Remove the backup entry from manifest
+                self.remove_backup_entry(original_path).await?;
+                
+                Ok(())
+            }
+            None => Err(crate::error::DottError::Operation(
+                format!("No backup found for: {}", original_path)
+            )),
+        }
+    }
+
+    pub async fn restore_all_backups(&self) -> DottResult<RestoreResult> {
+        let manifest = self.load_manifest().await?;
+        
+        if manifest.entries.is_empty() {
+            return Ok(RestoreResult {
+                restored_count: 0,
+                failed_restorations: Vec::new(),
+            });
+        }
+
+        let mut restored_count = 0;
+        let mut failed_restorations = Vec::new();
+
+        // Process each backup entry
+        for (original_path, entry) in &manifest.entries {
+            match self.restore_specific_file_from_entry(original_path, entry).await {
+                Ok(_) => {
+                    restored_count += 1;
+                }
+                Err(e) => {
+                    failed_restorations.push(RestoreError {
+                        path: original_path.clone(),
+                        error: e.to_string(),
+                    });
+                }
+            }
+        }
+
+        // Clear the manifest if all restorations were successful
+        if failed_restorations.is_empty() {
+            let empty_manifest = BackupManifest {
+                entries: HashMap::new(),
+            };
+            self.save_manifest(&empty_manifest).await?;
+        }
+
+        Ok(RestoreResult {
+            restored_count,
+            failed_restorations,
+        })
+    }
+
+    async fn restore_specific_file_from_entry(&self, original_path: &str, entry: &BackupEntry) -> DottResult<()> {
+        // Remove current file/symlink if it exists
+        if self.filesystem.exists(original_path).await? {
+            self.filesystem.remove_file(original_path).await?;
+        }
+        
+        // Restore from backup
+        self.restore_from_backup(entry).await?;
+        
+        Ok(())
+    }
+
+    pub async fn list_backups(&self) -> DottResult<Vec<BackupInfo>> {
+        let manifest = self.load_manifest().await?;
+        
+        let mut backups: Vec<BackupInfo> = manifest
+            .entries
+            .iter()
+            .map(|(path, entry)| BackupInfo {
+                original_path: path.clone(),
+                backup_path: entry.backup_path.clone(),
+                created_at: entry.created_at,
+                file_type: entry.file_type.clone(),
+                size_estimate: "Unknown".to_string(), // We could add actual size calculation
+            })
+            .collect();
+
+        // Sort by creation date (newest first)
+        backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        
+        Ok(backups)
     }
 }
 

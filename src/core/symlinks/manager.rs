@@ -35,7 +35,7 @@ pub struct SymlinkManager<F, P> {
     filesystem: F,
     #[allow(dead_code)]
     prompt: P,
-    backup_manager: BackupManager<F>,
+    pub backup_manager: BackupManager<F>,
     conflict_resolver: ConflictResolver<F, P>,
 }
 
@@ -50,6 +50,10 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
             backup_manager,
             conflict_resolver,
         }
+    }
+
+    pub fn get_backup_manager(&self) -> &BackupManager<F> {
+        &self.backup_manager
     }
 
     pub async fn create_symlinks(
@@ -268,9 +272,6 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
         Ok(missing_sources)
     }
 
-    pub fn get_backup_manager(&self) -> &BackupManager<F> {
-        &self.backup_manager
-    }
 }
 
 #[cfg(test)]

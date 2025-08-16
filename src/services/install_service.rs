@@ -29,6 +29,10 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         }
     }
 
+    pub fn get_backup_manager(&self) -> &crate::core::symlinks::backup::BackupManager<F> {
+        &self.symlink_manager.backup_manager
+    }
+
     pub async fn install_dependencies(&self) -> DottResult<()> {
         let config = self.load_config().await?;
         let platform = self.detect_platform();
@@ -335,10 +339,6 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         }
 
         Ok(result)
-    }
-
-    pub fn get_backup_manager(&self) -> &crate::core::symlinks::BackupManager<F> {
-        self.symlink_manager.get_backup_manager()
     }
 
     fn detect_platform(&self) -> String {
