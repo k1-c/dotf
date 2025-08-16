@@ -25,9 +25,7 @@ impl SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path)
-                .await
-                .map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -199,9 +197,7 @@ impl ScriptExecutor for SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path)
-                .await
-                .map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -228,9 +224,7 @@ impl ScriptExecutor for SystemScriptExecutor {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path)
-                .await
-                .map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();

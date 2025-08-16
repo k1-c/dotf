@@ -190,7 +190,8 @@ impl Repository for GitRepository {
             .unwrap_or_else(|_| "0\t0".to_string());
 
         let parts: Vec<&str> = rev_list.split('\t').collect();
-        let ahead_count = parts.first()
+        let ahead_count = parts
+            .first()
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(0);
         let behind_count = parts

@@ -286,7 +286,6 @@ impl UiComponents {
         }
 
         let percentage = (completed as f64 / total as f64 * 100.0) as u8;
-        
 
         if completed == total {
             self.formatter

@@ -28,9 +28,7 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn create_dir_all(&self, path: &str) -> DottResult<()> {
-        fs::create_dir_all(path)
-            .await
-            .map_err(DottError::Io)?;
+        fs::create_dir_all(path).await.map_err(DottError::Io)?;
         Ok(())
     }
 
@@ -69,14 +67,10 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn remove_file(&self, path: &str) -> DottResult<()> {
-        let metadata = fs::symlink_metadata(path)
-            .await
-            .map_err(DottError::Io)?;
+        let metadata = fs::symlink_metadata(path).await.map_err(DottError::Io)?;
 
         if metadata.is_dir() {
-            fs::remove_dir_all(path)
-                .await
-                .map_err(DottError::Io)?;
+            fs::remove_dir_all(path).await.map_err(DottError::Io)?;
         } else {
             fs::remove_file(path).await.map_err(DottError::Io)?;
         }
@@ -85,9 +79,7 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn remove_dir(&self, path: &str) -> DottResult<()> {
-        fs::remove_dir_all(path)
-            .await
-            .map_err(DottError::Io)?;
+        fs::remove_dir_all(path).await.map_err(DottError::Io)?;
         Ok(())
     }
 
@@ -99,9 +91,7 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        fs::copy(source, target)
-            .await
-            .map_err(DottError::Io)?;
+        fs::copy(source, target).await.map_err(DottError::Io)?;
         Ok(())
     }
 
@@ -129,9 +119,7 @@ impl FileSystem for RealFileSystem {
     }
 
     async fn is_symlink(&self, path: &str) -> DottResult<bool> {
-        let metadata = fs::symlink_metadata(path)
-            .await
-            .map_err(DottError::Io)?;
+        let metadata = fs::symlink_metadata(path).await.map_err(DottError::Io)?;
 
         Ok(metadata.file_type().is_symlink())
     }

@@ -48,7 +48,7 @@ pub mod tests {
     use std::sync::{Arc, Mutex};
 
     type ExecutedScript = (String, Vec<String>);
-    
+
     #[derive(Clone)]
     pub struct MockScriptExecutor {
         pub execution_results: Arc<Mutex<HashMap<String, ExecutionResult>>>,

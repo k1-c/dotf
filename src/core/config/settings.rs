@@ -8,8 +8,7 @@ pub struct Settings {
     pub initialized_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Repository {
     pub remote: String,
     pub branch: Option<String>,
@@ -25,7 +24,6 @@ impl Default for Settings {
         }
     }
 }
-
 
 impl Settings {
     pub fn new(repository_url: &str) -> Self {
