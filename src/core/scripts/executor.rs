@@ -262,6 +262,16 @@ mod tests {
         let mut file = fs::File::create(&script_path).await.unwrap();
         file.write_all(content.as_bytes()).await.unwrap();
         file.flush().await.unwrap();
+        drop(file); // Explicitly close the file
+
+        // Set executable permissions
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&script_path).await.unwrap().permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&script_path, perms).await.unwrap();
+        }
 
         let script_path_str = script_path.to_string_lossy().to_string();
         (temp_dir, script_path_str)
@@ -361,6 +371,22 @@ echo "stderr message" >&2
         }
     }
 
+    // Helper function for permission tests - creates script without execute permission
+    async fn create_test_script_no_exec(content: &str, extension: &str) -> (TempDir, String) {
+        let temp_dir = TempDir::new().unwrap();
+        let script_path = temp_dir.path().join(format!("test_script.{}", extension));
+
+        let mut file = fs::File::create(&script_path).await.unwrap();
+        file.write_all(content.as_bytes()).await.unwrap();
+        file.flush().await.unwrap();
+        drop(file); // Explicitly close the file
+
+        // Do NOT set executable permissions for this helper
+
+        let script_path_str = script_path.to_string_lossy().to_string();
+        (temp_dir, script_path_str)
+    }
+
     #[tokio::test]
     #[cfg(unix)]
     async fn test_system_script_executor_permissions() {
@@ -370,7 +396,7 @@ echo "stderr message" >&2
 echo "permission test"
 "#;
 
-        let (_temp_dir, script_path) = create_test_script(script_content, "sh").await;
+        let (_temp_dir, script_path) = create_test_script_no_exec(script_content, "sh").await;
 
         // Initially should not be executable
         let has_permission = executor.has_permission(&script_path).await.unwrap();

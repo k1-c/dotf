@@ -50,7 +50,7 @@ pre-commit:
     # Format check only on changed Rust files
     fmt:
       glob: "*.rs"
-      run: rustfmt --check {staged_files}
+      run: cargo fmt --all -- --check
       fail_text: "❌ Code is not formatted. Run 'cargo fmt' to fix."
       stage_fixed: false
       
