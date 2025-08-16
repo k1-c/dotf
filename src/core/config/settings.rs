@@ -3,73 +3,28 @@ use crate::error::DottResult;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Settings {
-    pub repository: RepositorySettings,
-    pub backup: BackupSettings,
-    pub sync: SyncSettings,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RepositorySettings {
-    pub url: String,
-    pub path: String,
-    pub branch: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct BackupSettings {
-    pub enabled: bool,
-    pub path: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SyncSettings {
-    pub auto_check: bool,
-    pub merge_strategy: MergeStrategy,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum MergeStrategy {
-    Rebase,
-    Merge,
-    Reset,
+    pub repository_url: String,
+    pub last_sync: Option<chrono::DateTime<chrono::Utc>>,
+    pub initialized_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            repository: RepositorySettings {
-                url: String::new(),
-                path: dirs::home_dir()
-                    .unwrap_or_default()
-                    .join(".dott")
-                    .join("repo")
-                    .to_string_lossy()
-                    .to_string(),
-                branch: "main".to_string(),
-            },
-            backup: BackupSettings {
-                enabled: true,
-                path: dirs::home_dir()
-                    .unwrap_or_default()
-                    .join(".dott")
-                    .join("backups")
-                    .to_string_lossy()
-                    .to_string(),
-            },
-            sync: SyncSettings {
-                auto_check: true,
-                merge_strategy: MergeStrategy::Rebase,
-            },
+            repository_url: String::new(),
+            last_sync: None,
+            initialized_at: chrono::Utc::now(),
         }
     }
 }
 
 impl Settings {
     pub fn new(repository_url: &str) -> Self {
-        let mut settings = Self::default();
-        settings.repository.url = repository_url.to_string();
-        settings
+        Self {
+            repository_url: repository_url.to_string(),
+            last_sync: None,
+            initialized_at: chrono::Utc::now(),
+        }
     }
     
     pub fn from_json(json: &str) -> DottResult<Self> {
@@ -88,16 +43,15 @@ mod tests {
     #[test]
     fn test_settings_default() {
         let settings = Settings::default();
-        assert!(settings.backup.enabled);
-        assert_eq!(settings.repository.branch, "main");
-        assert!(matches!(settings.sync.merge_strategy, MergeStrategy::Rebase));
+        assert!(settings.repository_url.is_empty());
+        assert!(settings.last_sync.is_none());
     }
     
     #[test]
     fn test_settings_new() {
         let settings = Settings::new("https://github.com/user/dotfiles.git");
-        assert_eq!(settings.repository.url, "https://github.com/user/dotfiles.git");
-        assert!(settings.backup.enabled);
+        assert_eq!(settings.repository_url, "https://github.com/user/dotfiles.git");
+        assert!(settings.last_sync.is_none());
     }
     
     #[test]
@@ -106,17 +60,7 @@ mod tests {
         let json = settings.to_json().unwrap();
         let deserialized = Settings::from_json(&json).unwrap();
         
-        assert_eq!(settings.repository.url, deserialized.repository.url);
-        assert_eq!(settings.backup.enabled, deserialized.backup.enabled);
-    }
-    
-    #[test]
-    fn test_merge_strategy_serialization() {
-        let json = r#"{"rebase": "rebase"}"#;
-        assert!(json.contains("rebase"));
-        
-        let settings = Settings::default();
-        let json = settings.to_json().unwrap();
-        assert!(json.contains("\"merge_strategy\": \"rebase\""));
+        assert_eq!(settings.repository_url, deserialized.repository_url);
+        assert_eq!(settings.last_sync, deserialized.last_sync);
     }
 }

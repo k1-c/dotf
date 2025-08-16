@@ -113,6 +113,7 @@ pub mod tests {
         
         async fn remove_file(&self, path: &str) -> DottResult<()> {
             self.files.lock().unwrap().remove(path);
+            self.symlinks.lock().unwrap().remove(path);
             Ok(())
         }
         

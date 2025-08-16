@@ -10,11 +10,10 @@ pub enum ConflictAction {
 }
 
 #[async_trait]
-pub trait Prompt: Send + Sync {
-    async fn ask_repository_url(&self) -> DottResult<String>;
-    async fn ask_conflict_resolution(&self, path: &str) -> DottResult<ConflictAction>;
+pub trait Prompt: Send + Sync + Clone {
+    async fn input(&self, message: &str, default: Option<&str>) -> DottResult<String>;
     async fn confirm(&self, message: &str) -> DottResult<bool>;
-    async fn select_option(&self, message: &str, options: &[String]) -> DottResult<usize>;
+    async fn select(&self, message: &str, options: &[(&str, &str)]) -> DottResult<usize>;
 }
 
 #[cfg(test)]
@@ -25,58 +24,37 @@ pub mod tests {
     
     #[derive(Clone)]
     pub struct MockPrompt {
-        pub repository_url_response: Arc<Mutex<Option<String>>>,
-        pub conflict_responses: Arc<Mutex<VecDeque<ConflictAction>>>,
+        pub input_responses: Arc<Mutex<VecDeque<String>>>,
         pub confirm_responses: Arc<Mutex<VecDeque<bool>>>,
         pub select_responses: Arc<Mutex<VecDeque<usize>>>,
-        pub asked_repository_url: Arc<Mutex<bool>>,
     }
     
     impl MockPrompt {
         pub fn new() -> Self {
             Self {
-                repository_url_response: Arc::new(Mutex::new(None)),
-                conflict_responses: Arc::new(Mutex::new(VecDeque::new())),
+                input_responses: Arc::new(Mutex::new(VecDeque::new())),
                 confirm_responses: Arc::new(Mutex::new(VecDeque::new())),
                 select_responses: Arc::new(Mutex::new(VecDeque::new())),
-                asked_repository_url: Arc::new(Mutex::new(false)),
             }
         }
         
-        pub fn set_repository_url_response(&self, url: &str) {
-            *self.repository_url_response.lock().unwrap() = Some(url.to_string());
+        pub fn set_input_response(&self, response: String) {
+            self.input_responses.lock().unwrap().push_back(response);
         }
         
-        pub fn add_conflict_response(&self, action: ConflictAction) {
-            self.conflict_responses.lock().unwrap().push_back(action);
-        }
-        
-        pub fn add_confirm_response(&self, response: bool) {
+        pub fn set_confirm_response(&self, response: bool) {
             self.confirm_responses.lock().unwrap().push_back(response);
         }
         
-        pub fn add_select_response(&self, index: usize) {
+        pub fn set_select_response(&self, index: usize) {
             self.select_responses.lock().unwrap().push_back(index);
-        }
-        
-        pub fn was_repository_url_asked(&self) -> bool {
-            *self.asked_repository_url.lock().unwrap()
         }
     }
     
     #[async_trait]
     impl Prompt for MockPrompt {
-        async fn ask_repository_url(&self) -> DottResult<String> {
-            *self.asked_repository_url.lock().unwrap() = true;
-            self.repository_url_response
-                .lock()
-                .unwrap()
-                .clone()
-                .ok_or_else(|| crate::error::DottError::UserCancelled)
-        }
-        
-        async fn ask_conflict_resolution(&self, _path: &str) -> DottResult<ConflictAction> {
-            self.conflict_responses
+        async fn input(&self, _message: &str, _default: Option<&str>) -> DottResult<String> {
+            self.input_responses
                 .lock()
                 .unwrap()
                 .pop_front()
@@ -91,7 +69,7 @@ pub mod tests {
                 .ok_or_else(|| crate::error::DottError::UserCancelled)
         }
         
-        async fn select_option(&self, _message: &str, _options: &[String]) -> DottResult<usize> {
+        async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DottResult<usize> {
             self.select_responses
                 .lock()
                 .unwrap()
@@ -107,64 +85,32 @@ mod prompt_tests {
     use super::*;
     
     #[tokio::test]
-    async fn test_mock_prompt_repository_url() {
+    async fn test_mock_prompt_input() {
         let prompt = MockPrompt::new();
-        prompt.set_repository_url_response("https://github.com/user/dotfiles.git");
+        prompt.set_input_response("test input".to_string());
         
-        let url = prompt.ask_repository_url().await.unwrap();
-        assert_eq!(url, "https://github.com/user/dotfiles.git");
-        assert!(prompt.was_repository_url_asked());
-    }
-    
-    #[tokio::test]
-    async fn test_mock_prompt_conflict_resolution() {
-        let prompt = MockPrompt::new();
-        prompt.add_conflict_response(ConflictAction::Backup);
-        prompt.add_conflict_response(ConflictAction::Skip);
-        
-        let action1 = prompt.ask_conflict_resolution("file1.txt").await.unwrap();
-        assert!(matches!(action1, ConflictAction::Backup));
-        
-        let action2 = prompt.ask_conflict_resolution("file2.txt").await.unwrap();
-        assert!(matches!(action2, ConflictAction::Skip));
+        let result = prompt.input("Enter value:", None).await.unwrap();
+        assert_eq!(result, "test input");
     }
     
     #[tokio::test]
     async fn test_mock_prompt_confirm() {
         let prompt = MockPrompt::new();
-        prompt.add_confirm_response(true);
-        prompt.add_confirm_response(false);
+        prompt.set_confirm_response(true);
+        prompt.set_confirm_response(false);
         
         assert!(prompt.confirm("Continue?").await.unwrap());
         assert!(!prompt.confirm("Delete file?").await.unwrap());
     }
     
     #[tokio::test]
-    async fn test_mock_prompt_select_option() {
+    async fn test_mock_prompt_select() {
         let prompt = MockPrompt::new();
-        prompt.add_select_response(1);
-        prompt.add_select_response(0);
+        prompt.set_select_response(1);
         
-        let options = vec!["Option A".to_string(), "Option B".to_string()];
+        let options = vec![("Option A", "First option"), ("Option B", "Second option")];
         
-        let selection1 = prompt.select_option("Choose:", &options).await.unwrap();
-        assert_eq!(selection1, 1);
-        
-        let selection2 = prompt.select_option("Choose again:", &options).await.unwrap();
-        assert_eq!(selection2, 0);
-    }
-    
-    #[tokio::test]
-    async fn test_mock_prompt_no_response_returns_error() {
-        let prompt = MockPrompt::new();
-        
-        // Without setting any response, should return UserCancelled error
-        let result = prompt.ask_repository_url().await;
-        assert!(result.is_err());
-        if let Err(crate::error::DottError::UserCancelled) = result {
-            // Expected
-        } else {
-            panic!("Expected UserCancelled error");
-        }
+        let selection = prompt.select("Choose:", &options).await.unwrap();
+        assert_eq!(selection, 1);
     }
 }

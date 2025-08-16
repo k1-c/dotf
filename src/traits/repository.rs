@@ -12,7 +12,7 @@ pub trait Repository {
     async fn get_remote_url(&self, repo_path: &str) -> DottResult<String>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RepositoryStatus {
     pub is_clean: bool,
     pub ahead_count: usize,

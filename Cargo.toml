@@ -47,6 +47,9 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 # Path expansion
 shellexpand = "3.1"
 
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"

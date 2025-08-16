@@ -39,6 +39,12 @@ pub enum DottError {
     
     #[error("Not initialized: Please run 'dott init' first")]
     NotInitialized,
+    
+    #[error("Operation error: {0}")]
+    Operation(String),
+    
+    #[error("Platform error: {0}")]
+    Platform(String),
 }
 
 impl From<toml::de::Error> for DottError {

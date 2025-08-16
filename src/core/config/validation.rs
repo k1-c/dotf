@@ -58,7 +58,7 @@ pub fn validate_config(config: &DottConfig) -> DottResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{RepoConfig, ScriptsConfig, DepsScripts, PlatformConfig};
+    use crate::core::config::dott_config::{RepoConfig, ScriptsConfig, PlatformConfig};
     use std::collections::HashMap;
     
     fn create_valid_config() -> DottConfig {
