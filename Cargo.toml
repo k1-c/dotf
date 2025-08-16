@@ -24,7 +24,6 @@ serde_json = "1.0"
 
 # Error handling
 thiserror = "2.0"
-anyhow = "1.0"
 
 # File system
 dirs = "6.0"
@@ -38,15 +37,12 @@ async-trait = "0.1"
 
 # Terminal UI
 dialoguer = "0.11"
-console = "0.16"
 indicatif = "0.17"
 colored = "3.0"
 
 # HTTP client for validation
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 
-# Path expansion
-shellexpand = "3.1"
 
 # Date/Time
 chrono = { version = "0.4", features = ["serde"] }

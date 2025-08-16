@@ -445,6 +445,12 @@ mod tests {
         );
 
         // Setup dependency script
+        #[cfg(target_os = "macos")]
+        let script_path = format!(
+            "{}/scripts/install-deps-macos.sh",
+            filesystem.dott_repo_path()
+        );
+        #[cfg(target_os = "linux")]
         let script_path = format!(
             "{}/scripts/install-deps-linux.sh",
             filesystem.dott_repo_path()
