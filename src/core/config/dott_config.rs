@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DottConfig {
     pub repo: RepoConfig,
     #[serde(default)]
@@ -12,7 +12,7 @@ pub struct DottConfig {
     pub platform: PlatformConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RepoConfig {
     pub name: String,
     pub version: String,
@@ -20,7 +20,7 @@ pub struct RepoConfig {
     pub author: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct ScriptsConfig {
     #[serde(default)]
     pub deps: DepsScripts,
@@ -28,19 +28,19 @@ pub struct ScriptsConfig {
     pub custom: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct DepsScripts {
     pub macos: Option<String>,
     pub linux: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct PlatformConfig {
     pub macos: Option<PlatformSymlinks>,
     pub linux: Option<PlatformSymlinks>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PlatformSymlinks {
     pub symlinks: HashMap<String, String>,
 }

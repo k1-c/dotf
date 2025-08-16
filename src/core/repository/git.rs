@@ -1,0 +1,148 @@
+use async_trait::async_trait;
+use crate::traits::repository::{Repository, RepositoryStatus};
+use crate::core::config::DottConfig;
+use crate::error::{DottResult, DottError};
+use std::process::Command;
+
+pub struct GitRepository;
+
+impl GitRepository {
+    pub fn new() -> Self {
+        Self
+    }
+    
+    fn run_git_command(&self, args: &[&str], cwd: Option<&str>) -> DottResult<String> {
+        let mut cmd = Command::new("git");
+        cmd.args(args);
+        
+        if let Some(cwd) = cwd {
+            cmd.current_dir(cwd);
+        }
+        
+        let output = cmd.output()
+            .map_err(|e| DottError::Git(format!("Failed to run git command: {}", e)))?;
+        
+        if !output.status.success() {
+            return Err(DottError::Git(
+                String::from_utf8_lossy(&output.stderr).to_string()
+            ));
+        }
+        
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    }
+}
+
+#[async_trait]
+impl Repository for GitRepository {
+    async fn validate_remote(&self, url: &str) -> DottResult<()> {
+        // Use git ls-remote to validate the repository
+        self.run_git_command(&["ls-remote", "--exit-code", url], None)?;
+        Ok(())
+    }
+    
+    async fn fetch_config(&self, url: &str) -> DottResult<DottConfig> {
+        // Create a temporary directory for sparse checkout
+        let temp_dir = tempfile::tempdir()
+            .map_err(|e| DottError::Io(e))?;
+        let temp_path = temp_dir.path().to_string_lossy();
+        
+        // Initialize git repo
+        self.run_git_command(&["init"], Some(&temp_path))?;
+        
+        // Add remote
+        self.run_git_command(&["remote", "add", "origin", url], Some(&temp_path))?;
+        
+        // Enable sparse checkout
+        self.run_git_command(&["config", "core.sparseCheckout", "true"], Some(&temp_path))?;
+        
+        // Configure sparse checkout to only get dott.toml
+        let sparse_file = temp_dir.path().join(".git/info/sparse-checkout");
+        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml")
+            .map_err(|e| DottError::Io(e))?;
+        
+        // Fetch
+        self.run_git_command(&["fetch", "--depth=1", "origin", "main"], Some(&temp_path))?;
+        
+        // Checkout
+        self.run_git_command(&["checkout", "main"], Some(&temp_path))?;
+        
+        // Read dott.toml
+        let config_path = temp_dir.path().join("dott.toml");
+        let alt_config_path = temp_dir.path().join(".dott/dott.toml");
+        
+        let config_content = if config_path.exists() {
+            std::fs::read_to_string(config_path)
+                .map_err(|e| DottError::Io(e))?
+        } else if alt_config_path.exists() {
+            std::fs::read_to_string(alt_config_path)
+                .map_err(|e| DottError::Io(e))?
+        } else {
+            return Err(DottError::Config("dott.toml not found in repository".to_string()));
+        };
+        
+        toml::from_str(&config_content)
+            .map_err(|e| DottError::Config(format!("Invalid dott.toml: {}", e)))
+    }
+    
+    async fn clone(&self, url: &str, destination: &str) -> DottResult<()> {
+        self.run_git_command(&["clone", url, destination], None)?;
+        Ok(())
+    }
+    
+    async fn pull(&self, repo_path: &str) -> DottResult<()> {
+        self.run_git_command(&["pull", "--rebase"], Some(repo_path))?;
+        Ok(())
+    }
+    
+    async fn get_status(&self, repo_path: &str) -> DottResult<RepositoryStatus> {
+        // Check if working tree is clean
+        let status_output = self.run_git_command(&["status", "--porcelain"], Some(repo_path))?;
+        let is_clean = status_output.is_empty();
+        
+        // Get current branch
+        let current_branch = self.run_git_command(
+            &["rev-parse", "--abbrev-ref", "HEAD"],
+            Some(repo_path)
+        )?;
+        
+        // Fetch to get latest remote info
+        let _ = self.run_git_command(&["fetch"], Some(repo_path));
+        
+        // Get ahead/behind counts
+        let rev_list = self.run_git_command(
+            &["rev-list", "--left-right", "--count", "HEAD...@{u}"],
+            Some(repo_path)
+        ).unwrap_or_else(|_| "0\t0".to_string());
+        
+        let parts: Vec<&str> = rev_list.split('\t').collect();
+        let ahead_count = parts.get(0)
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0);
+        let behind_count = parts.get(1)
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0);
+        
+        Ok(RepositoryStatus {
+            is_clean,
+            ahead_count,
+            behind_count,
+            current_branch,
+        })
+    }
+    
+    async fn get_remote_url(&self, repo_path: &str) -> DottResult<String> {
+        self.run_git_command(&["config", "--get", "remote.origin.url"], Some(repo_path))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_git_repository_creation() {
+        let repo = GitRepository::new();
+        // Just ensure we can create an instance
+        let _ = repo;
+    }
+}
