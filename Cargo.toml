@@ -23,7 +23,7 @@ toml = "0.8"
 serde_json = "1.0"
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 anyhow = "1.0"
 
 # File system
