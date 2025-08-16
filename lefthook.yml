@@ -1,0 +1,68 @@
+# Lefthook configuration for Git hooks
+# https://github.com/evilmartians/lefthook
+
+# Colors and output formatting
+colors: true
+no_tty: false
+
+pre-push:
+  parallel: false
+  piped: false
+  commands:
+    # Quick checks first
+    format-check:
+      run: cargo fmt -- --check
+      fail_text: "❌ Code formatting check failed. Run 'cargo fmt' to fix."
+      stage_fixed: false
+      
+    clippy:
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      fail_text: "❌ Clippy check failed. Fix the warnings above."
+      stage_fixed: false
+      
+    # Build and test
+    build:
+      run: cargo build --all-features
+      fail_text: "❌ Build failed. Fix compilation errors."
+      stage_fixed: false
+      
+    test:
+      run: cargo test --all-features
+      fail_text: "❌ Tests failed. Fix failing tests."
+      stage_fixed: false
+      
+    test-no-features:
+      run: cargo test --no-default-features
+      fail_text: "❌ Tests with no features failed."
+      stage_fixed: false
+      
+    # Documentation
+    doc:
+      run: cargo doc --all-features --no-deps --document-private-items
+      fail_text: "❌ Documentation build failed."
+      stage_fixed: false
+      
+    # Optional: Run full CI check script if it exists
+    # ci-check:
+    #   run: ./scripts/ci-check.sh
+    #   fail_text: "❌ CI checks failed."
+    #   skip:
+    #     - rebase
+    #     - merge
+
+pre-commit:
+  parallel: true
+  commands:
+    # Format check only on changed Rust files
+    fmt:
+      glob: "*.rs"
+      run: rustfmt --check {staged_files}
+      fail_text: "❌ Code is not formatted. Run 'cargo fmt' to fix."
+      stage_fixed: false
+      
+    # Quick syntax check
+    check:
+      run: cargo check --all-features
+      fail_text: "❌ Cargo check failed."
+      stage_fixed: false
+      
