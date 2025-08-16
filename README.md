@@ -6,6 +6,8 @@
 
 *Sync your environment / configurations across machines in seconds*
 
+> ⚠️ **In Development** - This project is currently under active development. Features may be incomplete or subject to change.
+
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Crates.io](https://img.shields.io/crates/v/dott.svg?style=for-the-badge)](https://crates.io/crates/dott)
@@ -389,6 +391,8 @@ dott symlinks restore ~/.zshrc
 ```
 
 ## 🚧 Development
+
+**⚠️ This project is currently in development and not yet ready for production use.**
 
 ### Building from Source
 
