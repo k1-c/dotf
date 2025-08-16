@@ -91,6 +91,7 @@ impl Logo {
 pub enum InstallStage {
     Welcome,
     ValidatingRepository,
+    SelectingBranch,
     FetchingConfiguration,
     SettingUpDirectories,
     CloningRepository,
@@ -105,6 +106,7 @@ impl InstallStage {
         match self {
             InstallStage::Welcome => "Setting up dott",
             InstallStage::ValidatingRepository => "Validating repository URL",
+            InstallStage::SelectingBranch => "Selecting branch",
             InstallStage::FetchingConfiguration => "Fetching configuration from repository",
             InstallStage::SettingUpDirectories => "Setting up dott directories",
             InstallStage::CloningRepository => "Cloning dotfiles repository",
@@ -119,6 +121,7 @@ impl InstallStage {
         match self {
             InstallStage::Welcome => "🚀",
             InstallStage::ValidatingRepository => "🔍",
+            InstallStage::SelectingBranch => "🌿",
             InstallStage::FetchingConfiguration => "📥",
             InstallStage::SettingUpDirectories => "📁",
             InstallStage::CloningRepository => "📦",
@@ -133,6 +136,7 @@ impl InstallStage {
         vec![
             InstallStage::Welcome,
             InstallStage::ValidatingRepository,
+            InstallStage::SelectingBranch,
             InstallStage::FetchingConfiguration,
             InstallStage::SettingUpDirectories,
             InstallStage::CloningRepository,
@@ -181,8 +185,16 @@ impl InstallAnimation {
         
         println!("\n{}", stage_text);
         
-        // Add a brief loading animation
-        self.loading_dots(3).await;
+        // Add loading animation only for stages that actually process something
+        match stage {
+            InstallStage::SelectingBranch => {
+                // No loading animation for branch selection (user input)
+            }
+            _ => {
+                // Add a brief loading animation for other stages
+                self.loading_dots(3).await;
+            }
+        }
     }
 
     /// Show completion message

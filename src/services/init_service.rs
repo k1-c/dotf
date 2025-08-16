@@ -1,4 +1,4 @@
-use crate::core::config::{DottConfig, Settings};
+use crate::core::config::{DottConfig, Settings, Repository as RepositoryConfig};
 use crate::error::{DottError, DottResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 
@@ -43,7 +43,11 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
         // Create local settings
         let settings = Settings {
-            repository_url: url.clone(),
+            repository: RepositoryConfig {
+                remote: url.clone(),
+                branch: None,
+                local: Some(repo_path.clone()),
+            },
             last_sync: None,
             initialized_at: chrono::Utc::now(),
         };
@@ -90,7 +94,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         }
 
         let settings = self.load_settings().await?;
-        Ok(Some(settings.repository_url))
+        Ok(Some(settings.repository.remote))
     }
 
     pub async fn validate_current_setup(&self) -> DottResult<()> {
@@ -175,7 +179,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
     async fn save_settings(&self, settings: &Settings) -> DottResult<()> {
         let settings_path = self.filesystem.dott_settings_path();
-        let content = serde_json::to_string_pretty(settings)
+        let content = settings.to_toml()
             .map_err(|e| DottError::Config(format!("Failed to serialize settings: {}", e)))?;
         
         self.filesystem.write(&settings_path, &content).await?;
@@ -190,7 +194,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
-        let settings: Settings = serde_json::from_str(&content)
+        let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Config(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)
@@ -296,11 +300,15 @@ mod tests {
         // Setup existing initialization
         filesystem.create_dott_directory().await.unwrap();
         let settings = Settings {
-            repository_url: "https://github.com/old/repo.git".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/old/repo.git".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: None,
             initialized_at: chrono::Utc::now(),
         };
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
         filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
 
@@ -329,11 +337,15 @@ mod tests {
         // Setup existing initialization
         filesystem.create_dott_directory().await.unwrap();
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles.git".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/user/dotfiles.git".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: None,
             initialized_at: chrono::Utc::now(),
         };
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.write(&filesystem.dott_settings_path(), &settings_content).await.unwrap();
         filesystem.create_dir_all(&filesystem.dott_repo_path()).await.unwrap();
 

@@ -42,7 +42,7 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
             ));
         }
 
-        // Perform pull
+        // Perform pull (repository will use the configured branch)
         self.repository.pull(&repo_path).await?;
 
         // Get status after sync
@@ -50,12 +50,12 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
 
         // Update last sync timestamp
         let updated_settings = Settings {
-            repository_url: settings.repository_url,
+            repository: settings.repository,
             last_sync: Some(Utc::now()),
             initialized_at: settings.initialized_at,
         };
 
-        let settings_content = serde_json::to_string_pretty(&updated_settings)
+        let settings_content = updated_settings.to_toml()
             .map_err(|e| DottError::Serialization(e.to_string()))?;
         
         self.filesystem.write(&settings_path, &settings_content).await?;
@@ -118,7 +118,7 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         let settings_path = self.filesystem.dott_settings_path();
         let content = self.filesystem.read_to_string(&settings_path).await?;
         
-        let settings: Settings = serde_json::from_str(&content)
+        let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
         
         Ok(settings)
@@ -196,12 +196,16 @@ mod tests {
         
         // Set up initialized state
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: None,
             initialized_at: Utc::now(),
         };
         
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
         
@@ -230,12 +234,16 @@ mod tests {
         
         // Set up initialized state
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: None,
             initialized_at: Utc::now(),
         };
         
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
         
@@ -251,11 +259,13 @@ mod tests {
         // Set up initialized state
         let settings = Settings {
             repository_url: "https://github.com/user/dotfiles".to_string(),
+            branch: None,
+            local_path: None,
             last_sync: Some(Utc::now()),
             initialized_at: Utc::now(),
         };
         
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
         
@@ -284,12 +294,16 @@ mod tests {
         
         // Set up initialized state
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: None,
             initialized_at: Utc::now(),
         };
         
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         filesystem.add_directory(&filesystem.dott_repo_path());
         

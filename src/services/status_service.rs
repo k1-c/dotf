@@ -143,7 +143,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         let status = self.repository.get_status(&repo_path).await?;
 
         Ok(RepositoryStatusInfo {
-            url: settings.repository_url,
+            url: settings.repository.remote,
             path: repo_path,
             status,
             last_sync: settings.last_sync,
@@ -314,7 +314,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
-        let settings: Settings = serde_json::from_str(&content)
+        let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Config(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)

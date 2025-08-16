@@ -3,4 +3,4 @@ pub mod settings;
 pub mod validation;
 
 pub use dott_config::DottConfig;
-pub use settings::Settings;
+pub use settings::{Settings, Repository};

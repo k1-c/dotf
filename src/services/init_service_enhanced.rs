@@ -1,6 +1,6 @@
 //! Enhanced init service with progress callbacks for animations
 
-use crate::core::config::{DottConfig, Settings};
+use crate::core::config::{DottConfig, Settings, Repository as RepositoryConfig};
 use crate::error::{DottError, DottResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 use crate::cli::ui::InstallStage;
@@ -48,11 +48,23 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         // Validate the repository URL
         self.repository.validate_remote(&url).await
             .map_err(|e| DottError::Repository(format!("Invalid repository URL '{}': {}", url, e)))?;
+        
+        // Get default branch and prompt for branch selection
+        progress_callback(&InstallStage::SelectingBranch);
+        let default_branch = self.repository.get_default_branch(&url).await
+            .unwrap_or_else(|_| "main".to_string());
+        
+        let selected_branch = self.prompt_for_branch(&default_branch).await?;
+        
+        // Validate that the selected branch exists
+        if !self.repository.branch_exists(&url, &selected_branch).await? {
+            return Err(DottError::Repository(format!("Branch '{}' does not exist in repository '{}'", selected_branch, url)));
+        }
 
         // Fetch and validate configuration
         progress_callback(&InstallStage::FetchingConfiguration);
-        let config = self.repository.fetch_config(&url).await
-            .map_err(|e| DottError::Config(format!("Failed to fetch configuration from '{}': {}", url, e)))?;
+        let config = self.repository.fetch_config_from_branch(&url, &selected_branch).await
+            .map_err(|e| DottError::Config(format!("Failed to fetch configuration from '{}' branch '{}': {}", url, selected_branch, e)))?;
 
         self.validate_config(&config)?;
 
@@ -63,12 +75,16 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         // Clone the repository
         progress_callback(&InstallStage::CloningRepository);
         let repo_path = self.filesystem.dott_repo_path();
-        self.repository.clone(&url, &repo_path).await?;
+        self.repository.clone_branch(&url, &selected_branch, &repo_path).await?;
 
         // Create local settings
         progress_callback(&InstallStage::FinalizeSetup);
         let settings = Settings {
-            repository_url: url.clone(),
+            repository: RepositoryConfig {
+                remote: url.clone(),
+                branch: Some(selected_branch),
+                local: Some(repo_path.clone()),
+            },
             last_sync: None,
             initialized_at: chrono::Utc::now(),
         };
@@ -78,6 +94,30 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         progress_callback(&InstallStage::Complete);
         
         Ok(url)
+    }
+
+    async fn prompt_for_branch(&self, default_branch: &str) -> DottResult<String> {
+        loop {
+            let prompt_text = format!("Enter the branch to use (default: {}): ", default_branch);
+            match self.prompt.input(&prompt_text, Some(default_branch)).await {
+                Ok(branch) => {
+                    let branch = branch.trim();
+                    if branch.is_empty() {
+                        return Ok(default_branch.to_string());
+                    }
+                    return Ok(branch.to_string());
+                }
+                Err(e) => {
+                    // Check if this is an interruption (Ctrl+C)
+                    let error_msg = e.to_string();
+                    if error_msg.contains("read interrupted") || error_msg.contains("Interrupted") {
+                        return Err(DottError::UserCancellation);
+                    }
+                    // Re-throw other errors
+                    return Err(e);
+                }
+            }
+        }
     }
 
     // Include all the original methods from InitService
@@ -154,7 +194,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
 
     async fn save_settings(&self, settings: &Settings) -> DottResult<()> {
         let settings_path = self.filesystem.dott_settings_path();
-        let content = serde_json::to_string_pretty(settings)
+        let content = settings.to_toml()
             .map_err(|e| DottError::Config(format!("Failed to serialize settings: {}", e)))?;
         
         self.filesystem.write(&settings_path, &content).await?;

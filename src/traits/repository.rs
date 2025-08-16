@@ -6,11 +6,15 @@ use crate::error::DottResult;
 pub trait Repository {
     async fn validate_remote(&self, url: &str) -> DottResult<()>;
     async fn fetch_config(&self, url: &str) -> DottResult<DottConfig>;
+    async fn fetch_config_from_branch(&self, url: &str, branch: &str) -> DottResult<DottConfig>;
     async fn clone(&self, url: &str, destination: &str) -> DottResult<()>;
+    async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DottResult<()>;
     async fn pull(&self, repo_path: &str) -> DottResult<()>;
     async fn get_status(&self, repo_path: &str) -> DottResult<RepositoryStatus>;
     async fn get_remote_url(&self, repo_path: &str) -> DottResult<String>;
     async fn is_file_modified(&self, repo_path: &str, file_path: &str) -> DottResult<bool>;
+    async fn get_default_branch(&self, url: &str) -> DottResult<String>;
+    async fn branch_exists(&self, url: &str, branch: &str) -> DottResult<bool>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -35,6 +39,8 @@ pub mod tests {
         pub config_response: Arc<Mutex<Option<DottConfig>>>,
         pub status_response: Arc<Mutex<Option<RepositoryStatus>>>,
         pub remote_url_response: Arc<Mutex<Option<String>>>,
+        pub default_branch_response: Arc<Mutex<Option<String>>>,
+        pub branch_exists_response: Arc<Mutex<bool>>,
     }
     
     impl MockRepository {
@@ -47,6 +53,8 @@ pub mod tests {
                 config_response: Arc::new(Mutex::new(None)),
                 status_response: Arc::new(Mutex::new(None)),
                 remote_url_response: Arc::new(Mutex::new(None)),
+                default_branch_response: Arc::new(Mutex::new(None)),
+                branch_exists_response: Arc::new(Mutex::new(true)),
             }
         }
         
@@ -64,6 +72,14 @@ pub mod tests {
         
         pub fn set_remote_url(&mut self, url: String) {
             *self.remote_url_response.lock().unwrap() = Some(url);
+        }
+        
+        pub fn set_default_branch(&mut self, branch: String) {
+            *self.default_branch_response.lock().unwrap() = Some(branch);
+        }
+        
+        pub fn set_branch_exists(&mut self, exists: bool) {
+            *self.branch_exists_response.lock().unwrap() = exists;
         }
         
         pub fn get_validate_calls(&self) -> Vec<String> {
@@ -99,8 +115,21 @@ pub mod tests {
                 .ok_or_else(|| crate::error::DottError::Config("No config response set".to_string()))
         }
         
+        async fn fetch_config_from_branch(&self, _url: &str, _branch: &str) -> DottResult<DottConfig> {
+            self.config_response
+                .lock()
+                .unwrap()
+                .clone()
+                .ok_or_else(|| crate::error::DottError::Config("No config response set".to_string()))
+        }
+        
         async fn clone(&self, url: &str, destination: &str) -> DottResult<()> {
             self.clone_calls.lock().unwrap().push((url.to_string(), destination.to_string()));
+            Ok(())
+        }
+        
+        async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DottResult<()> {
+            self.clone_calls.lock().unwrap().push((format!("{}#{}", url, branch), destination.to_string()));
             Ok(())
         }
         
@@ -108,6 +137,7 @@ pub mod tests {
             self.pull_calls.lock().unwrap().push(repo_path.to_string());
             Ok(())
         }
+        
         
         async fn get_status(&self, _repo_path: &str) -> DottResult<RepositoryStatus> {
             self.status_response
@@ -128,6 +158,18 @@ pub mod tests {
         async fn is_file_modified(&self, _repo_path: &str, _file_path: &str) -> DottResult<bool> {
             // Default to false for mock
             Ok(false)
+        }
+        
+        async fn get_default_branch(&self, _url: &str) -> DottResult<String> {
+            self.default_branch_response
+                .lock()
+                .unwrap()
+                .clone()
+                .ok_or_else(|| crate::error::DottError::Repository("No default branch response set".to_string()))
+        }
+        
+        async fn branch_exists(&self, _url: &str, _branch: &str) -> DottResult<bool> {
+            Ok(*self.branch_exists_response.lock().unwrap())
         }
     }
 }

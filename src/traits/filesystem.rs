@@ -37,7 +37,7 @@ pub trait FileSystem: Send + Sync {
         dirs::home_dir()
             .unwrap_or_default()
             .join(".dott")
-            .join("settings.json")
+            .join("settings.toml")
             .to_string_lossy()
             .to_string()
     }
@@ -259,7 +259,7 @@ mod filesystem_tests {
         // Test that dott paths are properly formatted
         assert!(fs.dott_directory().ends_with(".dott"));
         assert!(fs.dott_repo_path().ends_with(".dott/repo"));
-        assert!(fs.dott_settings_path().ends_with(".dott/settings.json"));
+        assert!(fs.dott_settings_path().ends_with(".dott/settings.toml"));
         assert!(fs.dott_backup_path().ends_with(".dott/backups"));
     }
 }

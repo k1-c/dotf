@@ -56,6 +56,12 @@ impl From<toml::de::Error> for DottError {
     }
 }
 
+impl From<toml::ser::Error> for DottError {
+    fn from(err: toml::ser::Error) -> Self {
+        DottError::Serialization(err.to_string())
+    }
+}
+
 impl From<serde_json::Error> for DottError {
     fn from(err: serde_json::Error) -> Self {
         DottError::Serialization(err.to_string())

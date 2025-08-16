@@ -60,11 +60,56 @@ impl Repository for GitRepository {
         std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml")
             .map_err(|e| DottError::Io(e))?;
         
-        // Fetch
-        self.run_git_command(&["fetch", "--depth=1", "origin", "main"], Some(&temp_path))?;
+        // Get default branch and fetch
+        let default_branch = self.get_default_branch(url).await.unwrap_or_else(|_| "main".to_string());
+        self.run_git_command(&["fetch", "--depth=1", "origin", &default_branch], Some(&temp_path))?;
         
         // Checkout
-        self.run_git_command(&["checkout", "main"], Some(&temp_path))?;
+        self.run_git_command(&["checkout", &default_branch], Some(&temp_path))?;
+        
+        // Read dott.toml
+        let config_path = temp_dir.path().join("dott.toml");
+        let alt_config_path = temp_dir.path().join(".dott/dott.toml");
+        
+        let config_content = if config_path.exists() {
+            std::fs::read_to_string(config_path)
+                .map_err(|e| DottError::Io(e))?
+        } else if alt_config_path.exists() {
+            std::fs::read_to_string(alt_config_path)
+                .map_err(|e| DottError::Io(e))?
+        } else {
+            return Err(DottError::Config("dott.toml not found in repository".to_string()));
+        };
+        
+        toml::from_str(&config_content)
+            .map_err(|e| DottError::Config(format!("Invalid dott.toml: {}", e)))
+    }
+    
+    async fn fetch_config_from_branch(&self, url: &str, branch: &str) -> DottResult<DottConfig> {
+        // Create a temporary directory for sparse checkout
+        let temp_dir = tempfile::tempdir()
+            .map_err(|e| DottError::Io(e))?;
+        let temp_path = temp_dir.path().to_string_lossy();
+        
+        // Initialize git repo
+        self.run_git_command(&["init"], Some(&temp_path))?;
+        
+        // Add remote
+        self.run_git_command(&["remote", "add", "origin", url], Some(&temp_path))?;
+        
+        // Enable sparse checkout
+        self.run_git_command(&["config", "core.sparseCheckout", "true"], Some(&temp_path))?;
+        
+        // Configure sparse checkout to only get dott.toml
+        let sparse_file = temp_dir.path().join(".git/info/sparse-checkout");
+        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml")
+            .map_err(|e| DottError::Io(e))?;
+        
+        // Fetch the specific branch
+        self.run_git_command(&["fetch", "--depth=1", "origin", branch], Some(&temp_path))?;
+        
+        // Checkout the branch
+        self.run_git_command(&["checkout", branch], Some(&temp_path))?;
         
         // Read dott.toml
         let config_path = temp_dir.path().join("dott.toml");
@@ -85,14 +130,29 @@ impl Repository for GitRepository {
     }
     
     async fn clone(&self, url: &str, destination: &str) -> DottResult<()> {
-        self.run_git_command(&["clone", url, destination], None)?;
+        // Get default branch and clone with that branch
+        let default_branch = self.get_default_branch(url).await.unwrap_or_else(|_| "main".to_string());
+        self.run_git_command(&["clone", "--branch", &default_branch, url, destination], None)?;
+        Ok(())
+    }
+    
+    async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DottResult<()> {
+        self.run_git_command(&["clone", "--branch", branch, url, destination], None)?;
         Ok(())
     }
     
     async fn pull(&self, repo_path: &str) -> DottResult<()> {
-        self.run_git_command(&["pull", "--rebase"], Some(repo_path))?;
+        // Get the current branch
+        let current_branch = self.run_git_command(
+            &["rev-parse", "--abbrev-ref", "HEAD"],
+            Some(repo_path)
+        )?;
+        
+        // Pull from origin with the current branch
+        self.run_git_command(&["pull", "--rebase", "origin", &current_branch], Some(repo_path))?;
         Ok(())
     }
+    
     
     async fn get_status(&self, repo_path: &str) -> DottResult<RepositoryStatus> {
         // Check if working tree is clean
@@ -144,6 +204,42 @@ impl Repository for GitRepository {
         // - Second column: working tree status  
         // - If either column is not empty or space, file is modified
         Ok(!output.trim().is_empty())
+    }
+    
+    async fn get_default_branch(&self, url: &str) -> DottResult<String> {
+        // Use git ls-remote to get the default branch (HEAD)
+        let output = self.run_git_command(&["ls-remote", "--symref", url, "HEAD"], None)?;
+        
+        // Parse output to find the default branch
+        // Format: "ref: refs/heads/main\tHEAD"
+        for line in output.lines() {
+            if line.starts_with("ref: refs/heads/") {
+                if let Some(branch) = line.split('\t').next() {
+                    if let Some(branch_name) = branch.strip_prefix("ref: refs/heads/") {
+                        return Ok(branch_name.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Fallback to "main" if we can't determine the default branch
+        Ok("main".to_string())
+    }
+    
+    async fn branch_exists(&self, url: &str, branch: &str) -> DottResult<bool> {
+        // Use git ls-remote to check if branch exists
+        let result = self.run_git_command(&["ls-remote", "--heads", url, branch], None);
+        
+        match result {
+            Ok(output) => {
+                // If output contains lines, the branch exists
+                Ok(!output.trim().is_empty())
+            }
+            Err(_) => {
+                // If command fails, assume branch doesn't exist or repo is unreachable
+                Ok(false)
+            }
+        }
     }
 }
 

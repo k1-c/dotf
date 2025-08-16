@@ -355,11 +355,15 @@ fn display_width(s: &str) -> usize {
     width
 }
 
-/// Test helper to verify ANSI stripping works correctly
 #[cfg(test)]
-fn test_ansi_stripping() {
-    assert_eq!(strip_ansi_codes("hello"), "hello");
-    assert_eq!(strip_ansi_codes("\x1b[31mred\x1b[0m"), "red");
-    assert_eq!(strip_ansi_codes("\x1b[1;32mbold green\x1b[0m"), "bold green");
-    assert_eq!(strip_ansi_codes("✅ Valid"), "✅ Valid");
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ansi_stripping() {
+        assert_eq!(strip_ansi_codes("hello"), "hello");
+        assert_eq!(strip_ansi_codes("\x1b[31mred\x1b[0m"), "red");
+        assert_eq!(strip_ansi_codes("\x1b[1;32mbold green\x1b[0m"), "bold green");
+        assert_eq!(strip_ansi_codes("✅ Valid"), "✅ Valid");
+    }
 }

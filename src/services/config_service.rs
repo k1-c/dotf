@@ -33,7 +33,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
-        let settings: Settings = serde_json::from_str(&content)
+        let settings: Settings = Settings::from_toml(&content)
             .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
         
         Ok(settings)
@@ -50,7 +50,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         
         // Interactive editing
         println!("📝 Current Settings:");
-        println!("Repository URL: {}", current_settings.repository_url);
+        println!("Repository URL: {}", current_settings.repository.remote);
         println!("Initialized: {}", current_settings.initialized_at.format("%Y-%m-%d %H:%M:%S"));
         if let Some(last_sync) = current_settings.last_sync {
             println!("Last Sync: {}", last_sync.format("%Y-%m-%d %H:%M:%S"));
@@ -64,16 +64,19 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         if should_edit {
             let new_url = self.prompt.input(
                 "Enter new repository URL:",
-                Some(&current_settings.repository_url)
+                Some(&current_settings.repository.remote)
             ).await?;
 
+            let mut updated_repository = current_settings.repository.clone();
+            updated_repository.remote = new_url;
+
             let updated_settings = Settings {
-                repository_url: new_url,
+                repository: updated_repository,
                 last_sync: current_settings.last_sync,
                 initialized_at: current_settings.initialized_at,
             };
 
-            let settings_content = serde_json::to_string_pretty(&updated_settings)
+            let settings_content = updated_settings.to_toml()
                 .map_err(|e| DottError::Serialization(e.to_string()))?;
             
             self.filesystem.write(&settings_path, &settings_content).await?;
@@ -296,16 +299,20 @@ mod tests {
         let (service, filesystem, _) = create_test_service();
         
         let settings = Settings {
-            repository_url: "https://github.com/user/dotfiles".to_string(),
+            repository: RepositoryConfig {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
             last_sync: Some(Utc::now()),
             initialized_at: Utc::now(),
         };
         
-        let settings_content = serde_json::to_string_pretty(&settings).unwrap();
+        let settings_content = settings.to_toml().unwrap();
         filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
         
         let result = service.show_settings().await.unwrap();
-        assert_eq!(result.repository_url, "https://github.com/user/dotfiles");
+        assert_eq!(result.repository.remote, "https://github.com/user/dotfiles");
     }
 
     #[tokio::test]
