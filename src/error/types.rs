@@ -31,6 +31,9 @@ pub enum DottError {
     #[error("User cancelled operation")]
     UserCancelled,
     
+    #[error("User cancellation")]
+    UserCancellation,
+    
     #[error("Serialization error: {0}")]
     Serialization(String),
     

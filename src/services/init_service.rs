@@ -50,10 +50,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
 
         self.save_settings(&settings).await?;
 
-        // Show success message
-        println!("✅ Successfully initialized dott with repository: {}", url);
-        println!("📁 Dott directory created at: {}", self.filesystem.dott_directory());
-        println!("🔗 Repository cloned to: {}", repo_path);
+        // Success messages will be handled by the CLI layer
         
         Ok(())
     }
@@ -124,13 +121,11 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
             ).await?;
 
             if url.trim().is_empty() {
-                println!("❌ Repository URL cannot be empty. Please try again.");
                 continue;
             }
 
             // Basic URL validation
             if !url.contains("://") && !url.starts_with("git@") {
-                println!("❌ Invalid URL format. Please provide a valid git repository URL.");
                 continue;
             }
 
@@ -156,9 +151,8 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
         
         // Check if .dott directory already exists
         if self.filesystem.exists(&dott_dir).await? {
-            println!("⚠️  Dott directory already exists at: {}", dott_dir);
             let should_overwrite = self.prompt.confirm(
-                "Do you want to remove the existing .dott directory and start fresh? (y/N)"
+                &format!("Dott directory already exists at: {}. Do you want to remove it and start fresh?", dott_dir)
             ).await?;
             
             if !should_overwrite {
@@ -166,7 +160,6 @@ impl<R: Repository, F: FileSystem, P: Prompt> InitService<R, F, P> {
             }
             
             // Remove existing directory
-            println!("🗑️  Removing existing .dott directory...");
             self.filesystem.remove_dir(&dott_dir).await?;
         }
         
