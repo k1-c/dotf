@@ -6,7 +6,7 @@
 
 *Sync your environment / configurations across machines in seconds*
 
-> ⚠️ **In Development** - This project is currently under active development. Features may be incomplete or subject to change.
+> 🚀 **Alpha Version** - Core functionality implemented. Ready for testing and feedback. Some advanced features may still be in development.
 
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
@@ -27,13 +27,15 @@ curl -sSL dott-install.sh | sh
 
 ## ✨ Features
 
-- 🚀 **Modern CLI** - Beautiful, intuitive command-line interface
+- 🚀 **Modern CLI** - Beautiful, intuitive command-line interface with animations and progress indicators
+- 🌿 **Branch Selection** - Choose any branch during initialization with validation
 - 🔗 **Smart Symlink Management** - Automatic symbolic link creation with conflict resolution
 - 📦 **Dependency Management** - Cross-platform system dependency installation
 - 🔄 **Git Integration** - Seamless sync with remote repositories
 - 🎯 **Validation** - Repository configuration validation
 - 💾 **Backup System** - Safe backup and restore of existing configurations
-- 🎨 **Beautiful Output** - Progress bars and colored terminal output
+- 🎨 **Beautiful Output** - Progress bars, animations, and colored terminal output
+- ⚙️ **TOML Configuration** - Modern configuration format for better readability
 
 ## 🚀 Quick Start
 
@@ -50,8 +52,11 @@ curl -sSL dott-install.sh | sh
 ### Initialize from Remote Repository
 
 ```bash
-# Initialize dott with a remote repository
+# Initialize dott with a remote repository (with interactive branch selection)
 dott init https://github.com/username/dotfiles.git
+
+# Or initialize without specifying URL (will prompt for URL and branch)
+dott init
 
 # Install system dependencies
 dott install deps
@@ -100,10 +105,12 @@ dott init https://github.com/username/dotfiles.git
 
 This command:
 
+- Detects and displays the repository's default branch
+- Prompts for branch selection with validation
 - Validates the remote repository structure and configuration
 - Creates `~/.dott/` directory
-- Clones the repository to `~/.dott/repo/`
-- Creates `~/.dott/settings.json` for local configuration
+- Clones the specified branch to `~/.dott/repo/`
+- Creates `~/.dott/settings.toml` for local configuration
 
 #### 2. Dependency Installation
 
@@ -209,24 +216,16 @@ my-dotfiles/
 
 ## 🔧 Local Configuration
 
-Dott creates `~/.dott/settings.json` for local configuration:
+Dott creates `~/.dott/settings.toml` for local configuration:
 
-```json
-{
-  "repository": {
-    "url": "https://github.com/username/dotfiles.git",
-    "path": "~/.dott/repo",
-    "branch": "main"
-  },
-  "backup": {
-    "enabled": true,
-    "path": "~/.dott/backups"
-  },
-  "sync": {
-    "auto_check": true,
-    "merge_strategy": "rebase"
-  }
-}
+```toml
+[repository]
+remote = "https://github.com/username/dotfiles.git"
+branch = "main"
+local = "/home/user/.dott/repo"
+
+last_sync = 2024-01-15T10:30:00Z
+initialized_at = 2024-01-15T09:00:00Z
 ```
 
 ## 🎯 Status and Monitoring
@@ -350,7 +349,7 @@ dott install setup-zsh
 ### Initial Setup on New Machine
 
 ```bash
-# 1. Initialize with your dotfiles repository
+# 1. Initialize with your dotfiles repository (will prompt for branch selection)
 dott init https://github.com/myuser/dotfiles.git
 
 # 2. Install system dependencies
@@ -366,6 +365,12 @@ dott install zsh-setup
 # 5. Check final status
 dott status
 ```
+
+The init process will:
+- Detect the repository's default branch (e.g., "main", "master")
+- Prompt you to select a branch with the default pre-filled
+- Validate that the selected branch exists
+- Clone from the chosen branch
 
 ### Daily Sync Workflow
 
@@ -392,7 +397,7 @@ dott symlinks restore ~/.zshrc
 
 ## 🚧 Development
 
-**⚠️ This project is currently in development and not yet ready for production use.**
+**🚀 Alpha Version** - Core functionality implemented and ready for testing. Feedback and contributions welcome!
 
 ### Building from Source
 
