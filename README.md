@@ -2,7 +2,7 @@
 
 # ⚙️ Dott ⚡
 
-**A Modern Dotfiles Manager**
+**Modern Dotfiles Manager**
 
 *Sync your environment / configurations across machines in seconds*
 
