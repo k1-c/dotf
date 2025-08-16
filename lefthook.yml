@@ -1,5 +1,6 @@
 # Lefthook configuration for Git hooks
 # https://github.com/evilmartians/lefthook
+# Supports Unix-like systems (Linux, macOS)
 
 # Colors and output formatting
 colors: true
