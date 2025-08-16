@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 General Discussion
+    url: https://github.com/k1-c/dott/discussions
+    about: Ask questions, share ideas, or discuss anything related to dott
+  - name: 📚 Documentation
+    url: https://github.com/k1-c/dott/blob/main/README.md
+    about: Check the documentation for usage instructions and examples
+  - name: 🔍 Search Issues
+    url: https://github.com/k1-c/dott/issues
+    about: Search existing issues before creating a new one

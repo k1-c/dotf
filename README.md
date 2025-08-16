@@ -4,7 +4,7 @@
 
 **Modern Dotfiles Manager**
 
-*Sync your environment / configurations across machines in seconds*
+_Sync your environment / configurations across machines in seconds_
 
 > 🚀 **Alpha Version** - Core functionality implemented. Ready for testing and feedback. Some advanced features may still be in development.
 
@@ -17,7 +17,7 @@
 curl -sSL dott-install.sh | sh
 ```
 
-*One command to rule them all* ⚡
+_One command to rule them all_ ⚡
 
 </div>
 
@@ -53,7 +53,7 @@ curl -sSL dott-install.sh | sh
 
 ```bash
 # Initialize dott with a remote repository (with interactive branch selection)
-dott init https://github.com/username/dotfiles.git
+dott init --repo https://github.com/username/dotfiles.git
 
 # Or initialize without specifying URL (will prompt for URL and branch)
 dott init
@@ -84,7 +84,7 @@ dott sync
 
 | Command                 | Description                              |
 | ----------------------- | ---------------------------------------- |
-| `dott init <repo>`      | Initialize dott with a remote repository |
+| `dott init`             | Initialize dott with a remote repository |
 | `dott install deps`     | Install system dependencies              |
 | `dott install config`   | Create configuration symlinks            |
 | `dott install <custom>` | Run custom installation scripts          |
@@ -100,7 +100,7 @@ dott sync
 
 ```bash
 # Initialize with remote repository
-dott init https://github.com/username/dotfiles.git
+dott init --repo https://github.com/username/dotfiles.git
 ```
 
 This command:
@@ -149,19 +149,6 @@ Execute custom installation scripts defined in your configuration.
 Your dotfiles repository should contain a `dott.toml` configuration file:
 
 ```toml
-[repo]
-name = "my-dotfiles"
-version = "1.0.0"
-description = "My personal development environment"
-author = "Your Name <your.email@example.com>"
-
-[dependencies]
-# System dependencies by package manager
-homebrew = ["git", "nvim", "tmux", "bat", "exa"]
-apt = ["git", "neovim", "tmux", "bat"]
-pacman = ["git", "neovim", "tmux", "bat"]
-yum = ["git", "neovim", "tmux"]
-
 [symlinks]
 # Source (in repo) -> Target (on system)
 "nvim" = "~/.config/nvim"
@@ -219,13 +206,13 @@ my-dotfiles/
 Dott creates `~/.dott/settings.toml` for local configuration:
 
 ```toml
+last_sync = 2024-01-15T10:30:00Z
+initialized_at = 2024-01-15T09:00:00Z
+
 [repository]
 remote = "https://github.com/username/dotfiles.git"
 branch = "main"
 local = "/home/user/.dott/repo"
-
-last_sync = 2024-01-15T10:30:00Z
-initialized_at = 2024-01-15T09:00:00Z
 ```
 
 ## 🎯 Status and Monitoring
@@ -367,6 +354,7 @@ dott status
 ```
 
 The init process will:
+
 - Detect the repository's default branch (e.g., "main", "master")
 - Prompt you to select a branch with the default pre-filled
 - Validate that the selected branch exists
