@@ -133,6 +133,18 @@ impl Repository for GitRepository {
     async fn get_remote_url(&self, repo_path: &str) -> DottResult<String> {
         self.run_git_command(&["config", "--get", "remote.origin.url"], Some(repo_path))
     }
+    
+    async fn is_file_modified(&self, repo_path: &str, file_path: &str) -> DottResult<bool> {
+        // Check if file has local changes using git status --porcelain
+        let output = self.run_git_command(&["status", "--porcelain", file_path], Some(repo_path))?;
+        
+        // If output is not empty, the file has changes
+        // Git status --porcelain format:
+        // - First column: index status
+        // - Second column: working tree status  
+        // - If either column is not empty or space, file is modified
+        Ok(!output.trim().is_empty())
+    }
 }
 
 #[cfg(test)]

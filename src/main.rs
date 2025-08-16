@@ -5,6 +5,7 @@ use dott::core::{
     filesystem::RealFileSystem,
     repository::GitRepository,
     scripts::SystemScriptExecutor,
+    symlinks::SymlinkStatus,
 };
 use dott::error::{DottError, DottResult};
 use dott::services::{
@@ -215,6 +216,32 @@ async fn run() -> DottResult<()> {
                     }
                     if status.symlinks.invalid_targets > 0 {
                         println!("   Invalid targets: {} 🎯", status.symlinks.invalid_targets);
+                    }
+                    if status.symlinks.modified > 0 {
+                        println!("   Modified: {} 🔄", status.symlinks.modified);
+                    }
+                    
+                    // Display detailed status for each symlink
+                    if !status.symlinks.details.is_empty() {
+                        println!("\n📋 Detailed Status:");
+                        for detail in &status.symlinks.details {
+                            let status_icon = match detail.status {
+                                SymlinkStatus::Valid => "✅",
+                                SymlinkStatus::Missing => "❌",
+                                SymlinkStatus::Broken => "💥",
+                                SymlinkStatus::Conflict => "⚠️",
+                                SymlinkStatus::InvalidTarget => "🎯",
+                                SymlinkStatus::Modified => "🔄",
+                            };
+                            
+                            println!("  {} {} -> {}", status_icon, detail.target_path, detail.source_path);
+                            
+                            if let Some(current_target) = &detail.current_target {
+                                if detail.status == SymlinkStatus::InvalidTarget {
+                                    println!("      Currently points to: {}", current_target);
+                                }
+                            }
+                        }
                     }
                 }
             }

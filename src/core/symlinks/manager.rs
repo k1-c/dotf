@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 use crate::error::{DottError, DottResult};
-use crate::traits::{filesystem::FileSystem, prompt::Prompt};
+use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 use super::{
     backup::{BackupManager, BackupEntry},
     conflict::{ConflictResolver, ConflictInfo},
@@ -15,6 +15,7 @@ pub enum SymlinkStatus {
     Broken,         // Symlink exists but target does not exist
     Conflict,       // File exists at target location but is not the expected symlink
     InvalidTarget,  // Symlink exists but points to wrong target
+    Modified,       // Symlink is valid but source file has local changes
 }
 
 #[derive(Debug, Clone)]
@@ -185,7 +186,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
             let status = self.get_single_symlink_status(operation).await?;
             
             match status.status {
-                SymlinkStatus::Valid | SymlinkStatus::Broken | SymlinkStatus::InvalidTarget => {
+                SymlinkStatus::Valid | SymlinkStatus::Broken | SymlinkStatus::InvalidTarget | SymlinkStatus::Modified => {
                     self.filesystem.remove_file(&operation.target_path).await?;
                 }
                 SymlinkStatus::Missing => {
@@ -210,8 +211,8 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
             let status = self.get_single_symlink_status(operation).await?;
             
             match status.status {
-                SymlinkStatus::Valid => {
-                    // Nothing to repair
+                SymlinkStatus::Valid | SymlinkStatus::Modified => {
+                    // Nothing to repair for Valid or Modified symlinks
                     continue;
                 }
                 SymlinkStatus::Missing => {
@@ -270,6 +271,47 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
         }
         
         Ok(missing_sources)
+    }
+
+    pub async fn get_symlink_status_with_changes<R: Repository>(
+        &self,
+        operations: &[SymlinkOperation],
+        repository: &R,
+        repo_path: &str,
+    ) -> DottResult<Vec<SymlinkInfo>> {
+        let mut statuses = Vec::new();
+        
+        for operation in operations {
+            let mut status = self.get_single_symlink_status(operation).await?;
+            
+            // If symlink is valid, check for local changes
+            if status.status == SymlinkStatus::Valid {
+                // Convert absolute source path to relative path from repo root
+                let relative_source = if operation.source_path.starts_with(repo_path) {
+                    operation.source_path.strip_prefix(repo_path)
+                        .unwrap_or(&operation.source_path)
+                        .trim_start_matches('/')
+                } else {
+                    &operation.source_path
+                };
+                
+                match repository.is_file_modified(repo_path, relative_source).await {
+                    Ok(true) => {
+                        status.status = SymlinkStatus::Modified;
+                    }
+                    Ok(false) => {
+                        // Keep as Valid
+                    }
+                    Err(_) => {
+                        // If we can't check git status, keep original status
+                    }
+                }
+            }
+            
+            statuses.push(status);
+        }
+        
+        Ok(statuses)
     }
 
 }

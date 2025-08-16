@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::core::{
     config::{DottConfig, Settings},
-    symlinks::{SymlinkManager, SymlinkStatus},
+    symlinks::{SymlinkManager, SymlinkStatus, SymlinkOperation},
 };
 use crate::error::{DottError, DottResult};
 use crate::traits::{
@@ -36,6 +37,7 @@ pub struct SymlinksStatusInfo {
     pub broken: usize,
     pub conflicts: usize,
     pub invalid_targets: usize,
+    pub modified: usize,
     pub details: Vec<SymlinkStatusDetail>,
 }
 
@@ -108,6 +110,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
                     broken: 0,
                     conflicts: 0,
                     invalid_targets: 0,
+                    modified: 0,
                     details: Vec::new(),
                 },
                 config: ConfigStatusInfo {
@@ -123,15 +126,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
 
         let repository_status = self.get_repository_status().await?;
         let config_status = self.get_config_status().await?;
-        let symlinks_status = SymlinksStatusInfo {
-            total: 0,
-            valid: 0,
-            missing: 0,
-            broken: 0,
-            conflicts: 0,
-            invalid_targets: 0,
-            details: Vec::new(),
-        };
+        let symlinks_status = self.get_symlinks_status().await?;
 
         Ok(DottStatus {
             initialized: true,
@@ -153,6 +148,78 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
             status,
             last_sync: settings.last_sync,
         })
+    }
+
+    pub async fn get_symlinks_status(&self) -> DottResult<SymlinksStatusInfo> {
+        let config = match self.load_config().await {
+            Ok(config) => config,
+            Err(_) => {
+                // If config can't be loaded, return empty status
+                return Ok(SymlinksStatusInfo {
+                    total: 0,
+                    valid: 0,
+                    missing: 0,
+                    broken: 0,
+                    conflicts: 0,
+                    invalid_targets: 0,
+                    modified: 0,
+                    details: Vec::new(),
+                });
+            }
+        };
+
+        let platform = self.detect_platform();
+        let mut symlinks = config.symlinks.clone();
+
+        // Add platform-specific symlinks
+        match platform.as_str() {
+            "macos" => {
+                if let Some(macos_config) = config.platform.macos {
+                    symlinks.extend(macos_config.symlinks);
+                }
+            }
+            "linux" => {
+                if let Some(linux_config) = config.platform.linux {
+                    symlinks.extend(linux_config.symlinks);
+                }
+            }
+            _ => {}
+        }
+
+        let operations = self.create_symlink_operations(&symlinks).await?;
+        let repo_path = self.filesystem.dott_repo_path();
+        let symlink_infos = self.symlink_manager.get_symlink_status_with_changes(&operations, &self.repository, &repo_path).await?;
+
+        let mut status_info = SymlinksStatusInfo {
+            total: symlink_infos.len(),
+            valid: 0,
+            missing: 0,
+            broken: 0,
+            conflicts: 0,
+            invalid_targets: 0,
+            modified: 0,
+            details: Vec::new(),
+        };
+
+        for info in symlink_infos {
+            match info.status {
+                SymlinkStatus::Valid => status_info.valid += 1,
+                SymlinkStatus::Missing => status_info.missing += 1,
+                SymlinkStatus::Broken => status_info.broken += 1,
+                SymlinkStatus::Conflict => status_info.conflicts += 1,
+                SymlinkStatus::InvalidTarget => status_info.invalid_targets += 1,
+                SymlinkStatus::Modified => status_info.modified += 1,
+            }
+
+            status_info.details.push(SymlinkStatusDetail {
+                source_path: info.source_path,
+                target_path: info.target_path,
+                status: info.status,
+                current_target: info.current_target,
+            });
+        }
+
+        Ok(status_info)
     }
 
     pub async fn get_config_status(&self) -> DottResult<ConfigStatusInfo> {
@@ -265,5 +332,49 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
             .map_err(|e| DottError::Config(format!("Failed to parse dott.toml: {}", e)))?;
 
         Ok(config)
+    }
+
+    async fn create_symlink_operations(&self, symlinks: &HashMap<String, String>) -> DottResult<Vec<SymlinkOperation>> {
+        let mut operations = Vec::new();
+        let repo_path = self.filesystem.dott_repo_path();
+
+        for (target, source) in symlinks {
+            // Expand target path (handle ~)
+            let expanded_target = if target.starts_with("~/") {
+                let home = dirs::home_dir()
+                    .ok_or_else(|| DottError::Operation("Could not determine home directory".to_string()))?;
+                target.replacen("~", &home.to_string_lossy(), 1)
+            } else {
+                target.clone()
+            };
+
+            // Create absolute source path
+            let absolute_source = if source.starts_with('/') {
+                source.clone()
+            } else {
+                format!("{}/{}", repo_path, source)
+            };
+
+            operations.push(SymlinkOperation {
+                source_path: absolute_source,
+                target_path: expanded_target,
+            });
+        }
+
+        Ok(operations)
+    }
+
+    fn detect_platform(&self) -> String {
+        #[cfg(target_os = "macos")]
+        return "macos".to_string();
+        
+        #[cfg(target_os = "linux")]
+        return "linux".to_string();
+        
+        #[cfg(target_os = "windows")]
+        return "windows".to_string();
+        
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+        return "unknown".to_string();
     }
 }

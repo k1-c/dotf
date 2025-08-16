@@ -10,6 +10,7 @@ pub trait Repository {
     async fn pull(&self, repo_path: &str) -> DottResult<()>;
     async fn get_status(&self, repo_path: &str) -> DottResult<RepositoryStatus>;
     async fn get_remote_url(&self, repo_path: &str) -> DottResult<String>;
+    async fn is_file_modified(&self, repo_path: &str, file_path: &str) -> DottResult<bool>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -122,6 +123,11 @@ pub mod tests {
                 .unwrap()
                 .clone()
                 .ok_or_else(|| crate::error::DottError::Repository("No remote URL response set".to_string()))
+        }
+        
+        async fn is_file_modified(&self, _repo_path: &str, _file_path: &str) -> DottResult<bool> {
+            // Default to false for mock
+            Ok(false)
         }
     }
 }
