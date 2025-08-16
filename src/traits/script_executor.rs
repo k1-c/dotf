@@ -47,11 +47,19 @@ pub mod tests {
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
+    type ExecutedScript = (String, Vec<String>);
+    
     #[derive(Clone)]
     pub struct MockScriptExecutor {
         pub execution_results: Arc<Mutex<HashMap<String, ExecutionResult>>>,
         pub permissions: Arc<Mutex<HashMap<String, bool>>>,
-        pub executed_scripts: Arc<Mutex<Vec<(String, Vec<String>)>>>,
+        pub executed_scripts: Arc<Mutex<Vec<ExecutedScript>>>,
+    }
+
+    impl Default for MockScriptExecutor {
+        fn default() -> Self {
+            Self::new()
+        }
     }
 
     impl MockScriptExecutor {

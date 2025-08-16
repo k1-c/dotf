@@ -47,6 +47,12 @@ pub struct BackupInfo {
     pub size_estimate: String,
 }
 
+impl Default for BackupManifest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BackupManifest {
     pub fn new() -> Self {
         Self {

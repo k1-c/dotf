@@ -70,6 +70,12 @@ pub mod tests {
         pub symlinks: Arc<Mutex<HashMap<String, String>>>,
     }
 
+    impl Default for MockFileSystem {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl MockFileSystem {
         pub fn new() -> Self {
             Self {

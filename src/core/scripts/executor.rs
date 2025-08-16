@@ -8,6 +8,12 @@ use crate::traits::script_executor::{ExecutionResult, ScriptExecutor};
 
 pub struct SystemScriptExecutor;
 
+impl Default for SystemScriptExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SystemScriptExecutor {
     pub fn new() -> Self {
         Self
@@ -21,7 +27,7 @@ impl SystemScriptExecutor {
 
             let metadata = fs::metadata(script_path)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -33,7 +39,7 @@ impl SystemScriptExecutor {
                 let new_permissions = std::fs::Permissions::from_mode(new_mode);
                 fs::set_permissions(script_path, new_permissions)
                     .await
-                    .map_err(|e| DottError::Io(e))?;
+                    .map_err(DottError::Io)?;
             }
         }
 
@@ -173,7 +179,7 @@ impl ScriptExecutor for SystemScriptExecutor {
         args: &[String],
     ) -> DottResult<ExecutionResult> {
         // Check if script exists
-        if !tokio::fs::metadata(script_path).await.is_ok() {
+        if tokio::fs::metadata(script_path).await.is_err() {
             return Err(DottError::ScriptExecution(format!(
                 "Script not found: {}",
                 script_path
@@ -195,7 +201,7 @@ impl ScriptExecutor for SystemScriptExecutor {
 
             let metadata = fs::metadata(script_path)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -224,7 +230,7 @@ impl ScriptExecutor for SystemScriptExecutor {
 
             let metadata = fs::metadata(script_path)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -235,7 +241,7 @@ impl ScriptExecutor for SystemScriptExecutor {
 
             fs::set_permissions(script_path, new_permissions)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
         }
 
         #[cfg(windows)]

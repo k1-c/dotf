@@ -29,6 +29,12 @@ pub mod tests {
         pub select_responses: Arc<Mutex<VecDeque<usize>>>,
     }
 
+    impl Default for MockPrompt {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl MockPrompt {
         pub fn new() -> Self {
             Self {

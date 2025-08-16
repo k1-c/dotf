@@ -6,6 +6,12 @@ use std::process::Command;
 
 pub struct GitRepository;
 
+impl Default for GitRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GitRepository {
     pub fn new() -> Self {
         Self
@@ -43,7 +49,7 @@ impl Repository for GitRepository {
 
     async fn fetch_config(&self, url: &str) -> DottResult<DottConfig> {
         // Create a temporary directory for sparse checkout
-        let temp_dir = tempfile::tempdir().map_err(|e| DottError::Io(e))?;
+        let temp_dir = tempfile::tempdir().map_err(DottError::Io)?;
         let temp_path = temp_dir.path().to_string_lossy();
 
         // Initialize git repo
@@ -57,7 +63,7 @@ impl Repository for GitRepository {
 
         // Configure sparse checkout to only get dott.toml
         let sparse_file = temp_dir.path().join(".git/info/sparse-checkout");
-        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml").map_err(|e| DottError::Io(e))?;
+        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml").map_err(DottError::Io)?;
 
         // Get default branch and fetch
         let default_branch = self
@@ -77,9 +83,9 @@ impl Repository for GitRepository {
         let alt_config_path = temp_dir.path().join(".dott/dott.toml");
 
         let config_content = if config_path.exists() {
-            std::fs::read_to_string(config_path).map_err(|e| DottError::Io(e))?
+            std::fs::read_to_string(config_path).map_err(DottError::Io)?
         } else if alt_config_path.exists() {
-            std::fs::read_to_string(alt_config_path).map_err(|e| DottError::Io(e))?
+            std::fs::read_to_string(alt_config_path).map_err(DottError::Io)?
         } else {
             return Err(DottError::Config(
                 "dott.toml not found in repository".to_string(),
@@ -92,7 +98,7 @@ impl Repository for GitRepository {
 
     async fn fetch_config_from_branch(&self, url: &str, branch: &str) -> DottResult<DottConfig> {
         // Create a temporary directory for sparse checkout
-        let temp_dir = tempfile::tempdir().map_err(|e| DottError::Io(e))?;
+        let temp_dir = tempfile::tempdir().map_err(DottError::Io)?;
         let temp_path = temp_dir.path().to_string_lossy();
 
         // Initialize git repo
@@ -106,7 +112,7 @@ impl Repository for GitRepository {
 
         // Configure sparse checkout to only get dott.toml
         let sparse_file = temp_dir.path().join(".git/info/sparse-checkout");
-        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml").map_err(|e| DottError::Io(e))?;
+        std::fs::write(&sparse_file, "dott.toml\n.dott/dott.toml").map_err(DottError::Io)?;
 
         // Fetch the specific branch
         self.run_git_command(&["fetch", "--depth=1", "origin", branch], Some(&temp_path))?;
@@ -119,9 +125,9 @@ impl Repository for GitRepository {
         let alt_config_path = temp_dir.path().join(".dott/dott.toml");
 
         let config_content = if config_path.exists() {
-            std::fs::read_to_string(config_path).map_err(|e| DottError::Io(e))?
+            std::fs::read_to_string(config_path).map_err(DottError::Io)?
         } else if alt_config_path.exists() {
-            std::fs::read_to_string(alt_config_path).map_err(|e| DottError::Io(e))?
+            std::fs::read_to_string(alt_config_path).map_err(DottError::Io)?
         } else {
             return Err(DottError::Config(
                 "dott.toml not found in repository".to_string(),
@@ -184,8 +190,7 @@ impl Repository for GitRepository {
             .unwrap_or_else(|_| "0\t0".to_string());
 
         let parts: Vec<&str> = rev_list.split('\t').collect();
-        let ahead_count = parts
-            .get(0)
+        let ahead_count = parts.first()
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(0);
         let behind_count = parts

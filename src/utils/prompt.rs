@@ -6,6 +6,12 @@ use dialoguer::{Confirm, Input, Select};
 #[derive(Clone)]
 pub struct ConsolePrompt;
 
+impl Default for ConsolePrompt {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConsolePrompt {
     pub fn new() -> Self {
         Self

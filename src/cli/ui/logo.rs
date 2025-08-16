@@ -210,19 +210,16 @@ impl InstallAnimation {
 
         println!("\n{}", self.theme.accent("What's next?"));
         println!(
-            "  {} {}",
-            self.theme.primary("→"),
-            "Run 'dott status' to see your setup"
+            "  {} Run 'dott status' to see your setup",
+            self.theme.primary("→")
         );
         println!(
-            "  {} {}",
-            self.theme.primary("→"),
-            "Run 'dott install config' to create symlinks"
+            "  {} Run 'dott install config' to create symlinks",
+            self.theme.primary("→")
         );
         println!(
-            "  {} {}",
-            self.theme.primary("→"),
-            "Run 'dott sync' to sync with remote"
+            "  {} Run 'dott sync' to sync with remote",
+            self.theme.primary("→")
         );
 
         println!("\n{}", self.theme.muted("Happy dotfile management! ✨"));

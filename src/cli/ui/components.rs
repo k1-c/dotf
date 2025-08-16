@@ -133,6 +133,7 @@ impl UiComponents {
     }
 
     /// Display symlink status summary (compact version)
+    #[allow(clippy::too_many_arguments)]
     pub fn symlinks_status_summary(
         &self,
         total: usize,
@@ -285,7 +286,9 @@ impl UiComponents {
         }
 
         let percentage = (completed as f64 / total as f64 * 100.0) as u8;
-        let status = if completed == total {
+        
+
+        if completed == total {
             self.formatter
                 .success(&format!("All {} completed", operation))
         } else {
@@ -293,9 +296,7 @@ impl UiComponents {
                 "{}/{} {} completed ({}%)",
                 completed, total, operation, percentage
             ))
-        };
-
-        status
+        }
     }
 
     /// Display an error with suggestions

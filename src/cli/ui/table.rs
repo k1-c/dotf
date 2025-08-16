@@ -149,6 +149,7 @@ impl Table {
 
         // Process each column, even if no cell exists for it
         let max_cols = widths.len();
+        #[allow(clippy::needless_range_loop)]
         for i in 0..max_cols {
             if i > 0 && self.show_borders {
                 row.push_str(&self.theme.muted("│"));
@@ -279,10 +280,9 @@ impl fmt::Display for List {
         for item in &self.items {
             writeln!(
                 f,
-                "{}{}{}{}",
+                "{}{} {}",
                 " ".repeat(self.indent),
                 self.theme.muted(&self.bullet),
-                " ",
                 item
             )?;
         }
@@ -309,7 +309,7 @@ fn strip_ansi_codes(s: &str) -> String {
 
                 // Skip the entire escape sequence
                 // ANSI escape sequences end with a letter (A-Za-z)
-                while let Some(next_ch) = chars.next() {
+                for next_ch in chars.by_ref() {
                     if next_ch.is_ascii_alphabetic() {
                         break;
                     }

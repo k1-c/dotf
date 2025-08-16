@@ -43,6 +43,12 @@ pub mod tests {
         pub branch_exists_response: Arc<Mutex<bool>>,
     }
 
+    impl Default for MockRepository {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl MockRepository {
         pub fn new() -> Self {
             Self {

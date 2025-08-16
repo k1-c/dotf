@@ -9,6 +9,12 @@ use crate::traits::filesystem::FileSystem;
 #[derive(Clone)]
 pub struct RealFileSystem;
 
+impl Default for RealFileSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RealFileSystem {
     pub fn new() -> Self {
         Self
@@ -24,7 +30,7 @@ impl FileSystem for RealFileSystem {
     async fn create_dir_all(&self, path: &str) -> DottResult<()> {
         fs::create_dir_all(path)
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
         Ok(())
     }
 
@@ -40,7 +46,7 @@ impl FileSystem for RealFileSystem {
         {
             tokio::fs::symlink(source, target)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
         }
 
         #[cfg(windows)]
@@ -65,14 +71,14 @@ impl FileSystem for RealFileSystem {
     async fn remove_file(&self, path: &str) -> DottResult<()> {
         let metadata = fs::symlink_metadata(path)
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
 
         if metadata.is_dir() {
             fs::remove_dir_all(path)
                 .await
-                .map_err(|e| DottError::Io(e))?;
+                .map_err(DottError::Io)?;
         } else {
-            fs::remove_file(path).await.map_err(|e| DottError::Io(e))?;
+            fs::remove_file(path).await.map_err(DottError::Io)?;
         }
 
         Ok(())
@@ -81,7 +87,7 @@ impl FileSystem for RealFileSystem {
     async fn remove_dir(&self, path: &str) -> DottResult<()> {
         fs::remove_dir_all(path)
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
         Ok(())
     }
 
@@ -95,12 +101,12 @@ impl FileSystem for RealFileSystem {
 
         fs::copy(source, target)
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
         Ok(())
     }
 
     async fn read_to_string(&self, path: &str) -> DottResult<String> {
-        fs::read_to_string(path).await.map_err(|e| DottError::Io(e))
+        fs::read_to_string(path).await.map_err(DottError::Io)
     }
 
     async fn write(&self, path: &str, content: &str) -> DottResult<()> {
@@ -111,13 +117,13 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        let mut file = fs::File::create(path).await.map_err(|e| DottError::Io(e))?;
+        let mut file = fs::File::create(path).await.map_err(DottError::Io)?;
 
         file.write_all(content.as_bytes())
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
 
-        file.flush().await.map_err(|e| DottError::Io(e))?;
+        file.flush().await.map_err(DottError::Io)?;
 
         Ok(())
     }
@@ -125,13 +131,13 @@ impl FileSystem for RealFileSystem {
     async fn is_symlink(&self, path: &str) -> DottResult<bool> {
         let metadata = fs::symlink_metadata(path)
             .await
-            .map_err(|e| DottError::Io(e))?;
+            .map_err(DottError::Io)?;
 
         Ok(metadata.file_type().is_symlink())
     }
 
     async fn read_link(&self, path: &str) -> DottResult<PathBuf> {
-        fs::read_link(path).await.map_err(|e| DottError::Io(e))
+        fs::read_link(path).await.map_err(DottError::Io)
     }
 }
 

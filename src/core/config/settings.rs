@@ -9,6 +9,7 @@ pub struct Settings {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Default)]
 pub struct Repository {
     pub remote: String,
     pub branch: Option<String>,
@@ -25,15 +26,6 @@ impl Default for Settings {
     }
 }
 
-impl Default for Repository {
-    fn default() -> Self {
-        Self {
-            remote: String::new(),
-            branch: None,
-            local: None,
-        }
-    }
-}
 
 impl Settings {
     pub fn new(repository_url: &str) -> Self {

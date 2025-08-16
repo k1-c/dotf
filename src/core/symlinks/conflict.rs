@@ -215,8 +215,8 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
                 }
                 Ok(Vec::new())
             }
-            4 | _ => {
-                // Abort
+            _ => {
+                // Abort or invalid choice
                 Err(DottError::Operation(
                     "Operation aborted by user".to_string(),
                 ))
@@ -225,11 +225,8 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
     }
 
     async fn remove_existing(&self, path: &str) -> DottResult<()> {
-        if self.filesystem.is_symlink(path).await? {
-            self.filesystem.remove_file(path).await?;
-        } else {
-            self.filesystem.remove_file(path).await?;
-        }
+        // Remove existing file or symlink
+        self.filesystem.remove_file(path).await?;
         Ok(())
     }
 }

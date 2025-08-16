@@ -122,6 +122,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
     }
 
     async fn prompt_for_branch(&self, default_branch: &str) -> DottResult<String> {
+        #[allow(clippy::never_loop)]
         loop {
             let prompt_text = format!("Enter the branch to use (default: {}): ", default_branch);
             match self.prompt.input(&prompt_text, Some(default_branch)).await {
