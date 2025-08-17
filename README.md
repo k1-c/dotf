@@ -12,6 +12,7 @@ _Sync your environment / configurations across machines in seconds_
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Crates.io](https://img.shields.io/crates/v/dotf.svg?style=for-the-badge)](https://crates.io/crates/dotf)
 [![GitHub release](https://img.shields.io/github/release/k1-c/dotf.svg?style=for-the-badge)](https://github.com/k1-c/dotf/releases)
+[![Docs](https://img.shields.io/badge/docs-deepwiki-blue.svg?style=for-the-badge)](https://deepwiki.com/k1-c/dotf)
 
 ```bash
 cargo install dotf
