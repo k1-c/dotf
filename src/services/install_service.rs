@@ -319,7 +319,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         let mut operations = Vec::new();
         let repo_path = self.filesystem.dotf_repo_path();
 
-        for (target, source) in symlinks {
+        for (source, target) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
                 let home = dirs::home_dir().ok_or_else(|| {
@@ -411,8 +411,8 @@ mod tests {
 
     fn create_test_config() -> DotfConfig {
         let mut symlinks = HashMap::new();
-        symlinks.insert("~/.vimrc".to_string(), ".vimrc".to_string());
-        symlinks.insert("~/.bashrc".to_string(), ".bashrc".to_string());
+        symlinks.insert(".vimrc".to_string(), "~/.vimrc".to_string());
+        symlinks.insert(".bashrc".to_string(), "~/.bashrc".to_string());
 
         let mut custom_scripts = HashMap::new();
         custom_scripts.insert("setup-vim".to_string(), "scripts/setup-vim.sh".to_string());
