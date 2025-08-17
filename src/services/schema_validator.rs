@@ -277,34 +277,45 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("dotf.toml");
 
-        let valid_content = r#"
+        // Use absolute paths to avoid current directory dependency
+        let test_dir = temp_dir.path().join("test");
+        let test_script_path = test_dir.join("script.sh");
+        let test_setup_path = test_dir.join("setup.sh");
+        let test_vimrc_path = test_dir.join(".vimrc");
+        let test_zshrc_path = test_dir.join(".zshrc");
+
+        let valid_content = format!(
+            r#"
 [symlinks]
-"test/.vimrc" = "~/.vimrc"
-"test/.zshrc" = "~/.zshrc"
+"{}" = "~/.vimrc"
+"{}" = "~/.zshrc"
 
 [scripts.deps]
-macos = "test/script.sh"
+macos = "{}"
 
 [scripts.custom]
-setup = "test/setup.sh"
-"#;
+setup = "{}"
+"#,
+            test_vimrc_path.to_string_lossy(),
+            test_zshrc_path.to_string_lossy(),
+            test_script_path.to_string_lossy(),
+            test_setup_path.to_string_lossy()
+        );
 
         // Create test files
-        fs::create_dir_all(temp_dir.path().join("test")).unwrap();
-        fs::write(temp_dir.path().join("test/.vimrc"), "").unwrap();
-        fs::write(temp_dir.path().join("test/.zshrc"), "").unwrap();
-        fs::write(temp_dir.path().join("test/script.sh"), "").unwrap();
-        fs::write(temp_dir.path().join("test/setup.sh"), "").unwrap();
+        fs::create_dir_all(&test_dir).unwrap();
+        fs::write(&test_vimrc_path, "").unwrap();
+        fs::write(&test_zshrc_path, "").unwrap();
+        fs::write(&test_script_path, "").unwrap();
+        fs::write(&test_setup_path, "").unwrap();
 
         fs::write(&config_path, valid_content).unwrap();
 
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
-
         let validator = SchemaValidator::new();
-        let result = validator.validate("dotf.toml").await.unwrap();
-
-        std::env::set_current_dir(original_dir).unwrap();
+        let result = validator
+            .validate(&config_path.to_string_lossy())
+            .await
+            .unwrap();
 
         assert!(result.is_valid);
         assert!(result.errors.is_empty());
@@ -352,23 +363,26 @@ setup = "test/setup.sh"
     #[tokio::test]
     async fn test_validate_duplicate_targets() {
         let temp_dir = TempDir::new().unwrap();
-        fs::create_dir_all(temp_dir.path().join("test")).unwrap();
-        fs::write(temp_dir.path().join("test/file1"), "").unwrap();
-        fs::write(temp_dir.path().join("test/file2"), "").unwrap();
+        let test_dir = temp_dir.path().join("test");
+        let file1_path = test_dir.join("file1");
+        let file2_path = test_dir.join("file2");
 
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        fs::create_dir_all(&test_dir).unwrap();
+        fs::write(&file1_path, "").unwrap();
+        fs::write(&file2_path, "").unwrap();
 
         let validator = SchemaValidator::new();
-        let content = r#"
+        let content = format!(
+            r#"
 [symlinks]
-"test/file1" = "~/.config"
-"test/file2" = "~/.config"
-"#;
+"{}" = "~/.config"
+"{}" = "~/.config"
+"#,
+            file1_path.to_string_lossy(),
+            file2_path.to_string_lossy()
+        );
 
-        let result = validator.validate_content(content).await.unwrap();
-
-        std::env::set_current_dir(original_dir).unwrap();
+        let result = validator.validate_content(&content).await.unwrap();
 
         assert!(!result.is_valid);
         assert!(result
