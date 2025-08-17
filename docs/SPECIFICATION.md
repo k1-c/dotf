@@ -248,7 +248,289 @@ linux = "scripts/install-deps-linux.sh"
 - `--repo`: リポジトリ設定（dotf.toml）を表示
 - `--edit`: ローカル設定（settings.json）を編集
 
+### `dotf schema`
+
+dotf.toml設定ファイルの管理を行います。
+
+#### `dotf schema init`
+
+dotfiles リポジトリ内で `dotf.toml` テンプレートファイルを生成します。
+
+**機能**:
+- dotf.toml テンプレートの生成
+
+**コマンド形式**:
+```bash
+# テンプレート生成
+dotf schema init
+```
+
+**処理内容**:
+1. 既存の `dotf.toml` の存在確認
+2. `dotf.toml`が存在しない場合のみ、テンプレートの生成
+
+**生成されるテンプレート**:
+```toml
+[symlinks]
+# {Source path} = {Target path}
+# Example:
+# "zsh/.zshrc" = "~/.zshrc"
+# "git/.gitconfig" = ""~/.gitconfig"
+# "nvim" = "~/.config/nvim"
+
+[scripts.deps]
+# Platform-specific dependency installation scripts
+# Example:
+# macos = "scripts/install-deps-macos.sh"
+# linux = "scripts/install-deps-linux.sh"
+
+[scripts.custom]
+# Custom installation scripts
+# setup-vim = "scripts/setup-vim-plugins.sh"
+# install-fonts = "scripts/install-fonts.sh"
+```
+
+**エラーケース**:
+- `dotf.toml` が既に存在する
+- ファイル書き込み権限の不足
+- ディスク容量不足
+
+#### `dotf schema test`
+
+現在のディレクトリまたは指定された `dotf.toml` の構文と構造を検証します。
+
+**機能**:
+- TOML構文の検証
+- dotfスキーマ仕様との適合性チェック
+- シンボリックリンク設定の妥当性検証
+- スクリプトファイルの存在確認
+
+**コマンド形式**:
+```bash
+# 現在のディレクトリのdotf.tomlを検証
+dotf schema test
+
+# ファイルパスを指定して検証
+dotf schema test --file path/to/dotf.toml
+
+# Short Option
+dotf schema test -f path/to/dotf.toml
+
+# エラー時に異常終了しない（デフォルトは異常終了）
+dotf schema test --ignore-errors
+```
+
+**処理内容**:
+1. 指定された `dotf.toml` ファイルの存在確認
+2. TOML構文解析
+3. 必須セクションの存在確認
+4. シンボリックリンク設定の妥当性チェック
+   - ソースパスの形式検証
+   - ソースパスの存在確認
+   - ターゲットパスの形式検証
+   - パス文字列の空白チェック
+5. スクリプト設定の検証
+   - スクリプトファイルの存在確認
+
+**出力例（成功）**:
+```
+$ dotf schema validate
+🔍 Validating dotf.toml...
+
+✅ TOML syntax: Valid
+✅ Schema compliance: Valid
+✅ Symlinks configuration: 12 entries, all valid
+✅ Scripts configuration: 3 entries, all files exist
+
+🎉 dotf.toml validation successful!
+```
+
+**出力例（エラーあり）**:
+```
+$ dotf schema validate
+🔍 Validating dotf.toml...
+
+✅ TOML syntax: Valid
+❌ Schema compliance: Issues found
+
+🚨 Validation errors:
+   Line 15: [symlinks] Empty source path: "" = ".vimrc"
+   Line 23: [scripts.deps] Missing script file: scripts/install-deps-linux.sh
+   Line 31: [platform.macos.symlinks] Invalid target path: "invalid-path"
+
+❌ Validation failed with 3 errors.
+```
+
+**オプション**:
+- `--file <path>`: 検証対象ファイルを指定（デフォルト: ./dotf.toml）
+- `--ignore-errors`: 検証エラーがある場合でもゼロコードで終了
+- `--quiet`: エラーと警告のみ表示
+
+**検証項目**:
+
+1. **構文検証**:
+   - TOML形式の妥当性
+
+2. **構造検証**:
+   - 必須セクション（`[symlinks]`）の存在
+   - セクション名の妥当性
+
+3. **シンボリックリンク検証**:
+   - ソースパス・ターゲットパスの非空文字列
+   - パスの形式妥当性（相対パス、絶対パス、チルダ展開）
+   - 重複エントリの検出
+
+4. **スクリプト検証**:
+   - スクリプトファイルの存在
+
+**終了ステータス**:
+- `0`: 検証成功
+- `1`: 検証エラー (--ignore-errorsオプションの場合は`0`)
+- `2`: ファイル不存在、権限エラーなどのシステムエラー
+
+**前提条件**:
+- `dotf.toml` ファイルが存在する
+- ファイルへの読み取り権限がある
+
+**エラーケース**:
+- `dotf.toml` ファイルが存在しない
+- ファイル読み取り権限の不足
+- TOML構文エラー
+- 必須セクションの不存在
+- 無効な設定値
+
 ## テストケース
+
+### スキーマ管理テスト
+
+#### dotf schema init テスト
+
+**正常なテンプレート生成**
+- 前提: dotf.toml が存在しないディレクトリ
+- 実行: `dotf schema init`
+- 期待: 固定テンプレート内容で dotf.toml が生成される
+
+**既存ファイルが存在する場合**
+- 前提: dotf.toml が既に存在する
+- 実行: `dotf schema init`
+- 期待: エラーメッセージ表示、既存ファイル保持
+
+**書き込み権限不足**
+- 前提: 書き込み権限のないディレクトリ
+- 実行: `dotf schema init`
+- 期待: 権限エラー表示、ファイル未作成
+
+**ディスク容量不足**
+- 前提: ディスク容量が不足している環境
+- 実行: `dotf schema init`
+- 期待: 容量不足エラー表示、ファイル未作成
+
+#### dotf schema test テスト
+
+**正常な設定ファイル検証**
+- 前提: 構文的に正しく、すべてのソースファイルとスクリプトが存在するdotf.toml
+- 実行: `dotf schema test`
+- 期待: 検証成功メッセージ、終了ステータス0
+
+**TOML構文エラー**
+- 前提: 構文的に無効なTOMLファイル（例: 不正な引用符、閉じ括弧なし）
+- 実行: `dotf schema test`
+- 期待: TOML構文エラー報告、終了ステータス1
+
+**必須セクション不存在**
+- 前提: [symlinks]セクションが存在しないdotf.toml
+- 実行: `dotf schema test`
+- 期待: 必須セクション不存在エラー、終了ステータス1
+
+**空のソースパス**
+- 前提: シンボリックリンク設定で空のソースパスを含む設定
+  ```toml
+  [symlinks]
+  "" = "~/.vimrc"
+  ```
+- 実行: `dotf schema test`
+- 期待: 空ソースパスエラー報告、終了ステータス1
+
+**空のターゲットパス**
+- 前提: シンボリックリンク設定で空のターゲットパスを含む設定
+  ```toml
+  [symlinks]
+  "vim/.vimrc" = ""
+  ```
+- 実行: `dotf schema test`
+- 期待: 空ターゲットパスエラー報告、終了ステータス1
+
+**存在しないソースファイル**
+- 前提: 存在しないファイルをソースパスに指定した設定
+  ```toml
+  [symlinks]
+  "nonexistent/.vimrc" = "~/.vimrc"
+  ```
+- 実行: `dotf schema test`
+- 期待: ソースファイル不存在エラー報告、終了ステータス1
+
+**存在しないスクリプトファイル**
+- 前提: 存在しないスクリプトファイルを参照する設定
+  ```toml
+  [scripts.deps]
+  linux = "scripts/nonexistent.sh"
+  ```
+- 実行: `dotf schema test`
+- 期待: スクリプトファイル不存在エラー報告、終了ステータス1
+
+**重複シンボリックリンクエントリ**
+- 前提: 同じターゲットパスに複数のソースが指定された設定
+  ```toml
+  [symlinks]
+  "vim/.vimrc" = "~/.vimrc"
+  "backup/.vimrc" = "~/.vimrc"
+  ```
+- 実行: `dotf schema test`
+- 期待: 重複エントリエラー報告、終了ステータス1
+
+**無効なパス形式**
+- 前提: 無効な文字を含むパス設定
+  ```toml
+  [symlinks]
+  "vim/.vimrc" = "~/invalid\0path"
+  ```
+- 実行: `dotf schema test`
+- 期待: 無効パス形式エラー報告、終了ステータス1
+
+**ファイル指定オプション**
+- 前提: 指定パスに正しいdotf.tomlが存在
+- 実行: `dotf schema test --file /path/to/dotf.toml`
+- 期待: 指定ファイルの検証実行、成功メッセージ
+
+**ファイル指定オプション（短縮形）**
+- 前提: 指定パスに正しいdotf.tomlが存在
+- 実行: `dotf schema test -f /path/to/dotf.toml`
+- 期待: 指定ファイルの検証実行、成功メッセージ
+
+**指定ファイル不存在**
+- 前提: 存在しないファイルパスを指定
+- 実行: `dotf schema test --file /nonexistent/dotf.toml`
+- 期待: ファイル不存在エラー、終了ステータス2
+
+**読み取り権限不足**
+- 前提: 読み取り権限のないdotf.toml
+- 実行: `dotf schema test`
+- 期待: 権限エラー、終了ステータス2
+
+**エラー無視オプション**
+- 前提: 検証エラーを含むdotf.toml
+- 実行: `dotf schema test --ignore-errors`
+- 期待: エラー報告されるが終了ステータス0
+
+**静寂モード**
+- 前提: エラーと正常メッセージの両方がある設定
+- 実行: `dotf schema test --quiet`
+- 期待: エラーメッセージのみ表示、正常メッセージは非表示
+
+**デフォルトファイル不存在**
+- 前提: カレントディレクトリにdotf.tomlが存在しない
+- 実行: `dotf schema test`
+- 期待: デフォルトファイル不存在エラー、終了ステータス2
 
 ### 初期化テスト
 
