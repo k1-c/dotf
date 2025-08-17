@@ -4,6 +4,12 @@ use std::path::Path;
 
 pub struct SchemaService;
 
+impl Default for SchemaService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SchemaService {
     pub fn new() -> Self {
         Self
@@ -21,7 +27,7 @@ impl SchemaService {
         let template_content = self.generate_template();
 
         // Write template to file
-        fs::write(config_path, template_content).map_err(|e| DotfError::Io(e))?;
+        fs::write(config_path, template_content).map_err(DotfError::Io)?;
 
         println!("✅ dotf.toml template created successfully!");
         println!("💡 Edit the file to customize your configuration");

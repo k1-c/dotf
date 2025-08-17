@@ -44,6 +44,12 @@ impl ValidationResult {
 
 pub struct SchemaValidator;
 
+impl Default for SchemaValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SchemaValidator {
     pub fn new() -> Self {
         Self
@@ -60,7 +66,7 @@ impl SchemaValidator {
         }
 
         // Read file content
-        let content = fs::read_to_string(file_path).map_err(|e| DotfError::Io(e))?;
+        let content = fs::read_to_string(file_path).map_err(DotfError::Io)?;
 
         self.validate_content(&content).await
     }
@@ -332,8 +338,15 @@ setup = "test/setup.sh"
 
         assert!(!result.is_valid);
         assert_eq!(result.errors.len(), 2);
-        assert!(result.errors[0].message.contains("Empty source path"));
-        assert!(result.errors[1].message.contains("Empty target path"));
+
+        // Check that both error types are present without assuming order
+        let error_messages: Vec<&String> = result.errors.iter().map(|e| &e.message).collect();
+        assert!(error_messages
+            .iter()
+            .any(|msg| msg.contains("Empty source path")));
+        assert!(error_messages
+            .iter()
+            .any(|msg| msg.contains("Empty target path")));
     }
 
     #[tokio::test]
