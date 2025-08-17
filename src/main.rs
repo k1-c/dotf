@@ -1,8 +1,9 @@
 use clap::Parser;
 use dotf::cli::args::{InstallTarget, SymlinksAction};
 use dotf::cli::{
-    BackupEntry, Cli, Commands, InstallAnimation, InterruptionContext, InterruptionHandler,
-    MessageFormatter, OperationResult, OperationStatus, Spinner, SymlinkDetail, UiComponents,
+    commands::schema, BackupEntry, Cli, Commands, InstallAnimation, InterruptionContext,
+    InterruptionHandler, MessageFormatter, OperationResult, OperationStatus, Spinner,
+    SymlinkDetail, UiComponents,
 };
 use dotf::core::{
     filesystem::RealFileSystem, repository::GitRepository, scripts::SystemScriptExecutor,
@@ -554,6 +555,9 @@ async fn run() -> DotfResult<()> {
                     }
                 }
             }
+        }
+        Commands::Schema { action } => {
+            schema::handle_schema(action).await?;
         }
     }
 

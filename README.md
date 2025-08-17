@@ -33,7 +33,8 @@ _One command to rule them all_ ⚡
 - 🔗 **Smart Symlink Management** - Automatic symbolic link creation with conflict resolution
 - 📦 **Dependency Management** - Cross-platform system dependency installation
 - 🔄 **Git Integration** - Seamless sync with remote repositories
-- 🎯 **Validation** - Repository configuration validation
+- 🎯 **Configuration Validation** - Comprehensive dotf.toml syntax and structure validation
+- 📋 **Template Generation** - Auto-generate dotf.toml templates for new repositories
 - 💾 **Backup System** - Safe backup and restore of existing configurations
 - 🎨 **Beautiful Output** - Progress bars, animations, and colored terminal output
 - ⚙️ **TOML Configuration** - Modern configuration format for better readability
@@ -94,6 +95,8 @@ dotf sync
 | `dotf symlinks restore` | Restore files from backup                |
 | `dotf sync`             | Sync with remote repository              |
 | `dotf config`           | View and edit dotf configuration         |
+| `dotf schema init`      | Generate dotf.toml template file         |
+| `dotf schema test`      | Validate dotf.toml syntax and structure  |
 
 ### Workflow
 
@@ -334,11 +337,33 @@ dotf install setup-zsh
 
 ## 📋 Common Workflows
 
+### Creating a New Dotfiles Repository
+
+```bash
+# 1. Create and initialize your dotfiles repository
+mkdir my-dotfiles && cd my-dotfiles
+git init
+
+# 2. Generate dotf.toml template
+dotf schema init
+
+# 3. Edit the configuration to match your setup
+vim dotf.toml
+
+# 4. Validate your configuration
+dotf schema test
+
+# 5. Create your dotfiles structure and commit
+mkdir -p zsh git nvim scripts
+# ... add your configuration files ...
+git add . && git commit -m "Initial dotfiles setup"
+```
+
 ### Initial Setup on New Machine
 
 ```bash
 # 1. Initialize with your dotfiles repository (will prompt for branch selection)
-dotf init https://github.com/myuser/dotfiles.git
+dotf init --repo https://github.com/myuser/dotfiles.git
 
 # 2. Install system dependencies
 dotf install deps
@@ -383,6 +408,46 @@ dotf symlinks restore --list
 # If something breaks, restore from backup
 dotf symlinks restore ~/.zshrc
 ```
+
+### Creating and Managing dotf.toml
+
+#### Generate Template for New Repository
+
+```bash
+# Create a new dotfiles repository
+mkdir my-dotfiles && cd my-dotfiles
+git init
+
+# Generate dotf.toml template
+dotf schema init
+
+# Edit the generated template
+vim dotf.toml
+```
+
+#### Validate Configuration
+
+```bash
+# Validate current dotf.toml
+dotf schema test
+
+# Validate specific file
+dotf schema test --file /path/to/dotf.toml
+
+# Validate with detailed output
+dotf schema test --quiet
+
+# Continue even if errors are found (useful for CI)
+dotf schema test --ignore-errors
+```
+
+The `dotf schema test` command validates:
+
+- **TOML Syntax**: Proper TOML formatting and structure
+- **Schema Compliance**: Required sections and valid configuration
+- **Symlink Configuration**: Path validation and duplicate detection
+- **Script Files**: Existence of referenced script files
+- **Source Files**: Existence of source files in symlink mappings
 
 ## 🚧 Development
 

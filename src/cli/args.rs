@@ -49,6 +49,11 @@ pub enum Commands {
         #[arg(long)]
         edit: bool,
     },
+    /// Manage dotf.toml schema
+    Schema {
+        #[command(subcommand)]
+        action: SchemaAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -76,5 +81,23 @@ pub enum SymlinksAction {
         all: bool,
         /// Specific file path to restore
         filepath: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SchemaAction {
+    /// Generate dotf.toml template file
+    Init,
+    /// Validate dotf.toml syntax and structure
+    Test {
+        /// Validation target file path (default: ./dotf.toml)
+        #[arg(long, short)]
+        file: Option<String>,
+        /// Continue execution even if validation errors are found
+        #[arg(long)]
+        ignore_errors: bool,
+        /// Show only errors and warnings
+        #[arg(long)]
+        quiet: bool,
     },
 }
