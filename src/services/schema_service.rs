@@ -68,16 +68,19 @@ mod tests {
     #[tokio::test]
     async fn test_init_success() {
         let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("dotf.toml");
+
+        // Set current directory to temp directory for the test
         let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         let service = SchemaService::new();
         let result = service.init().await;
 
+        // Restore original directory immediately
         std::env::set_current_dir(original_dir).unwrap();
 
         assert!(result.is_ok());
-        let config_path = temp_dir.path().join("dotf.toml");
         assert!(config_path.exists());
 
         let content = fs::read_to_string(&config_path).unwrap();
@@ -89,15 +92,19 @@ mod tests {
     #[tokio::test]
     async fn test_init_file_already_exists() {
         let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("dotf.toml");
+
+        // Set current directory to temp directory for the test
         let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         // Create existing dotf.toml
-        fs::write("dotf.toml", "existing content").unwrap();
+        fs::write(&config_path, "existing content").unwrap();
 
         let service = SchemaService::new();
         let result = service.init().await;
 
+        // Restore original directory immediately
         std::env::set_current_dir(original_dir).unwrap();
 
         assert!(result.is_err());
