@@ -45,7 +45,7 @@ _One command to rule them all_ ⚡
 # Install via cargo
 cargo install dotf
 
-# Or use the one-liner installer
+# Or use the one-liner installer without requiring Cargo / Rust dependencies
 curl -sSL dotf-install.sh | sh
 ```
 
