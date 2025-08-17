@@ -94,7 +94,7 @@ dotf sync
 | `dotf symlinks`         | List symlinks and their status           |
 | `dotf symlinks restore` | Restore files from backup                |
 | `dotf sync`             | Sync with remote repository              |
-| `dotf config`           | View and edit dotf configuration         |
+| `dotf config`           | View dotf configuration         |
 | `dotf schema init`      | Generate dotf.toml template file         |
 | `dotf schema test`      | Validate dotf.toml syntax and structure  |
 
@@ -226,15 +226,16 @@ local = "/home/user/.dotf/repo"
 ```bash
 $ dotf status
 
-📁 Repository: https://github.com/username/dotfiles.git
-├── 🌿 Branch: main
-├── 🔄 Status: 2 commits behind origin/main
-├── 📂 Local: ~/.dotf/repo
-└── ⏰ Last sync: 2 hours ago
+▶ Repository Status ──────────────────────────────
+Branch: main
+  ✅ Working tree is clean
+  📥 2 commits behind
 
-📁 Symlinks: 8 total, 6 active, 2 conflicts
-📦 Dependencies: 12 installed, 1 missing
-🔧 Custom scripts: 3 available
+▶ Symlinks Summary ──────────────────────────────
+  Total: 8
+  Valid: 6 ✅
+  Missing: 1 ❌
+  Conflicts: 1 ⚠️
 ```
 
 ### Symlinks Status
@@ -242,15 +243,20 @@ $ dotf status
 ```bash
 $ dotf symlinks
 
-📁 Configuration Symlinks
-├── ✅ ~/.zshrc → ~/.dotf/repo/zsh/zshrc
-├── ✅ ~/.tmux.conf → ~/.dotf/repo/tmux/tmux.conf
-├── ✅ ~/.config/nvim → ~/.dotf/repo/nvim
-├── ❌ ~/.gitconfig (conflict: exists, not symlinked)
-├── ⚠️  ~/.config/alacritty (missing target)
-└── 🔄 ~/.vimrc (backed up, symlink active)
+▶ Symlinks Summary ──────────────────────────────
+  Total: 6
+  Valid: 3 ✅
+  Conflicts: 1 ⚠️
+  Missing: 1 ❌
+  Broken: 1 💔
 
-💾 Backups available: 3 files
+▶ Symlinks Status ───────────────────────────────
+  ⚠️ Conflict git/.gitconfig → ~/.gitconfig (file exists)
+  ❌ Missing alacritty/alacritty.yml → ~/.config/alacritty/alacritty.yml (not created)
+  💔 Broken vim/.vimrc → ~/.vimrc (target missing)
+  ✅ Valid zsh/.zshrc → ~/.zshrc
+  ✅ Valid tmux/.tmux.conf → ~/.tmux.conf
+  ✅ Valid nvim → ~/.config/nvim
 ```
 
 ### Shell Integration
