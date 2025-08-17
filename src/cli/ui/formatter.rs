@@ -165,7 +165,8 @@ impl MessageFormatter {
             result.push_str(&format!("  {}\n", self.key_value(key, value)));
         }
 
-        result
+        // Remove trailing newline
+        result.trim_end().to_string()
     }
 }
 

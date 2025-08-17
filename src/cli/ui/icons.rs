@@ -47,7 +47,7 @@ impl Icons {
     pub const MISSING: &'static str = "❌";
     pub const BROKEN: &'static str = "💥";
     pub const CONFLICT: &'static str = "⚠️";
-    pub const INVALID_TARGET: &'static str = "🎯";
+    pub const INVALID_TARGET: &'static str = "❓";
     pub const MODIFIED: &'static str = "🔄";
 
     // UI elements

@@ -11,7 +11,7 @@ use dotf::error::{DotfError, DotfResult};
 use dotf::services::{
     ConfigService, EnhancedInitService, InstallService, StatusService, SyncService,
 };
-use dotf::traits::prompt::Prompt;
+use dotf::traits::{filesystem::FileSystem, prompt::Prompt};
 use dotf::utils::ConsolePrompt;
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -245,7 +245,9 @@ async fn run() -> DotfResult<()> {
                         })
                         .collect();
 
-                    println!("\n{}", ui.symlinks_status_table(&symlink_details));
+                    let filesystem = RealFileSystem::new();
+                    let repo_path = filesystem.dotf_repo_path();
+                    println!("{}", ui.symlinks_status_table(&symlink_details, &repo_path));
                 }
             }
         }
@@ -483,7 +485,9 @@ async fn run() -> DotfResult<()> {
                             })
                             .collect();
 
-                        println!("\n{}", ui.symlinks_status_table(&symlink_details));
+                        let filesystem = RealFileSystem::new();
+                        let repo_path = filesystem.dotf_repo_path();
+                        println!("{}", ui.symlinks_status_table(&symlink_details, &repo_path));
                     }
                 }
             }

@@ -1,6 +1,6 @@
 //! High-level UI components combining multiple UI elements
 
-use crate::cli::ui::{Icons, MessageFormatter, OperationStatus, Table, Theme};
+use crate::cli::ui::{Icons, MessageFormatter, OperationStatus, Theme};
 use crate::core::symlinks::SymlinkStatus;
 
 /// High-level UI components for common CLI patterns
@@ -83,53 +83,109 @@ impl UiComponents {
         output.join("\n")
     }
 
-    /// Display symlink status summary with a beautiful table
-    pub fn symlinks_status_table(&self, symlinks: &[SymlinkDetail]) -> String {
+    /// Display symlink status summary with a beautiful list
+    pub fn symlinks_status_table(&self, symlinks: &[SymlinkDetail], repo_path: &str) -> String {
         if symlinks.is_empty() {
             return self.formatter.info("No symlinks configured");
         }
 
-        let mut table =
-            Table::new().headers_from_strings(&["Status", "Target", "Source", "Details"]);
+        let mut output = Vec::new();
+        output.push(self.formatter.section("Symlinks Status"));
+
+        // Group symlinks by status for better organization
+        let mut by_status: std::collections::HashMap<String, Vec<&SymlinkDetail>> =
+            std::collections::HashMap::new();
 
         for symlink in symlinks {
-            let (status_icon, status_text) = match symlink.status {
-                SymlinkStatus::Valid => (Icons::VALID, self.theme.success("Valid")),
-                SymlinkStatus::Missing => (Icons::MISSING, self.theme.error("Missing")),
-                SymlinkStatus::Broken => (Icons::BROKEN, self.theme.error("Broken")),
-                SymlinkStatus::Conflict => (Icons::CONFLICT, self.theme.warning("Conflict")),
-                SymlinkStatus::InvalidTarget => {
-                    (Icons::INVALID_TARGET, self.theme.warning("Invalid Target"))
-                }
-                SymlinkStatus::Modified => (Icons::MODIFIED, self.theme.info("Modified")),
-            };
-
-            let status_col = format!("{} {}", status_icon, status_text);
-            let target_col = self.theme.path(&symlink.target_path);
-            let source_col = self.theme.path(&symlink.source_path);
-
-            let details_col = match symlink.status {
-                SymlinkStatus::InvalidTarget => {
-                    if let Some(ref current_target) = symlink.current_target {
-                        format!("Points to: {}", self.theme.muted(current_target))
-                    } else {
-                        String::new()
-                    }
-                }
-                SymlinkStatus::Missing => self.theme.muted("Link not created").to_string(),
-                SymlinkStatus::Broken => self.theme.muted("Target missing").to_string(),
-                SymlinkStatus::Conflict => self.theme.muted("File exists").to_string(),
-                SymlinkStatus::Modified => self.theme.muted("Content changed").to_string(),
-                SymlinkStatus::Valid => {
-                    String::new() // 正常な場合は詳細不要
-                }
-            };
-
-            table =
-                table.add_row_from_strings(&[&status_col, &target_col, &source_col, &details_col]);
+            let status_key = format!("{:?}", symlink.status);
+            by_status.entry(status_key).or_default().push(symlink);
         }
 
-        format!("{}\n{}", self.formatter.section("Symlinks Status"), table)
+        // Display order: Conflicts first, then Invalid, then others
+        let status_order = [
+            "Conflict",
+            "InvalidTarget",
+            "Missing",
+            "Broken",
+            "Modified",
+            "Valid",
+        ];
+
+        for status_name in &status_order {
+            if let Some(links) = by_status.get(*status_name) {
+                // Sort links alphabetically by source path within each group
+                let mut sorted_links = links.clone();
+                sorted_links.sort_by(|a, b| a.source_path.cmp(&b.source_path));
+
+                for symlink in sorted_links {
+                    let (status_icon, status_text) = match symlink.status {
+                        SymlinkStatus::Valid => (Icons::VALID, self.theme.success("Valid")),
+                        SymlinkStatus::Missing => (Icons::MISSING, self.theme.error("Missing")),
+                        SymlinkStatus::Broken => (Icons::BROKEN, self.theme.error("Broken")),
+                        SymlinkStatus::Conflict => {
+                            (Icons::CONFLICT, self.theme.warning("Conflict"))
+                        }
+                        SymlinkStatus::InvalidTarget => {
+                            (Icons::INVALID_TARGET, self.theme.warning("Wrong target"))
+                        }
+                        SymlinkStatus::Modified => (Icons::MODIFIED, self.theme.info("Modified")),
+                    };
+
+                    // Convert home directory to ~ notation for target display
+                    let home_dir = dirs::home_dir().map(|d| d.to_string_lossy().to_string());
+                    let target_display = if let Some(ref home) = home_dir {
+                        symlink.target_path.replace(home, "~")
+                    } else {
+                        symlink.target_path.clone()
+                    };
+
+                    // For source, remove the repository path prefix
+                    let source_display = if symlink.source_path.starts_with(repo_path) {
+                        let stripped = symlink
+                            .source_path
+                            .strip_prefix(repo_path)
+                            .unwrap_or(&symlink.source_path);
+                        if let Some(without_slash) = stripped.strip_prefix('/') {
+                            without_slash.to_string()
+                        } else {
+                            stripped.to_string()
+                        }
+                    } else if let Some(ref home) = home_dir {
+                        symlink.source_path.replace(home, "~")
+                    } else {
+                        symlink.source_path.clone()
+                    };
+
+                    // Format the entry
+                    let status_part = format!("{} {}", status_icon, status_text);
+                    let path_part = format!(
+                        "{} → {}",
+                        self.theme.path(&source_display),
+                        self.theme.path(&target_display)
+                    );
+
+                    // Add details if necessary
+                    let details = match symlink.status {
+                        SymlinkStatus::InvalidTarget => Some(self.theme.muted(" (wrong target)")),
+                        SymlinkStatus::Missing => Some(self.theme.muted(" (not created)")),
+                        SymlinkStatus::Broken => Some(self.theme.muted(" (target missing)")),
+                        SymlinkStatus::Conflict => Some(self.theme.muted(" (file exists)")),
+                        SymlinkStatus::Modified => Some(self.theme.muted(" (content changed)")),
+                        SymlinkStatus::Valid => None,
+                    };
+
+                    // Display on a single line
+                    if let Some(detail) = details {
+                        output.push(format!("  {} {}{}", status_part, path_part, detail));
+                    } else {
+                        output.push(format!("  {} {}", status_part, path_part));
+                    }
+                }
+            }
+        }
+
+        let result = output.join("\n");
+        format!("{}\n", result)
     }
 
     /// Display symlink status summary (compact version)
@@ -247,18 +303,20 @@ impl UiComponents {
             return self.formatter.info("No backups found");
         }
 
-        let mut table =
-            Table::new().headers_from_strings(&["Original Path", "Backup Location", "Created"]);
+        let mut output = Vec::new();
+        output.push(self.formatter.section("Available Backups"));
 
         for backup in backups {
-            table = table.add_row_from_strings(&[
-                &self.theme.path(&backup.original_path),
-                &self.theme.path(&backup.backup_path),
-                &backup.created_at,
-            ]);
+            let original = self.theme.path(&backup.original_path);
+            let backup_path = self.theme.muted(&backup.backup_path);
+            let created = self.theme.muted(&backup.created_at);
+
+            output.push(format!("  {} {}", original, created));
+            output.push(format!("    {}", backup_path));
         }
 
-        format!("{}\n{}", self.formatter.section("Available Backups"), table)
+        let result = output.join("\n");
+        format!("{}\n", result)
     }
 
     /// Display operation results
