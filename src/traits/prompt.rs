@@ -1,4 +1,4 @@
-use crate::error::DottResult;
+use crate::error::DotfResult;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
@@ -11,9 +11,9 @@ pub enum ConflictAction {
 
 #[async_trait]
 pub trait Prompt: Send + Sync + Clone {
-    async fn input(&self, message: &str, default: Option<&str>) -> DottResult<String>;
-    async fn confirm(&self, message: &str) -> DottResult<bool>;
-    async fn select(&self, message: &str, options: &[(&str, &str)]) -> DottResult<usize>;
+    async fn input(&self, message: &str, default: Option<&str>) -> DotfResult<String>;
+    async fn confirm(&self, message: &str) -> DotfResult<bool>;
+    async fn select(&self, message: &str, options: &[(&str, &str)]) -> DotfResult<usize>;
 }
 
 #[cfg(test)]
@@ -59,28 +59,28 @@ pub mod tests {
 
     #[async_trait]
     impl Prompt for MockPrompt {
-        async fn input(&self, _message: &str, _default: Option<&str>) -> DottResult<String> {
+        async fn input(&self, _message: &str, _default: Option<&str>) -> DotfResult<String> {
             self.input_responses
                 .lock()
                 .unwrap()
                 .pop_front()
-                .ok_or_else(|| crate::error::DottError::UserCancelled)
+                .ok_or_else(|| crate::error::DotfError::UserCancelled)
         }
 
-        async fn confirm(&self, _message: &str) -> DottResult<bool> {
+        async fn confirm(&self, _message: &str) -> DotfResult<bool> {
             self.confirm_responses
                 .lock()
                 .unwrap()
                 .pop_front()
-                .ok_or_else(|| crate::error::DottError::UserCancelled)
+                .ok_or_else(|| crate::error::DotfError::UserCancelled)
         }
 
-        async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DottResult<usize> {
+        async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DotfResult<usize> {
             self.select_responses
                 .lock()
                 .unwrap()
                 .pop_front()
-                .ok_or_else(|| crate::error::DottError::UserCancelled)
+                .ok_or_else(|| crate::error::DotfError::UserCancelled)
         }
     }
 }

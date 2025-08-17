@@ -1,4 +1,4 @@
-use crate::error::DottResult;
+use crate::error::DotfResult;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
@@ -31,14 +31,14 @@ impl ExecutionResult {
 
 #[async_trait]
 pub trait ScriptExecutor: Send + Sync {
-    async fn execute(&self, script_path: &str) -> DottResult<ExecutionResult>;
+    async fn execute(&self, script_path: &str) -> DotfResult<ExecutionResult>;
     async fn execute_with_args(
         &self,
         script_path: &str,
         args: &[String],
-    ) -> DottResult<ExecutionResult>;
-    async fn has_permission(&self, script_path: &str) -> DottResult<bool>;
-    async fn make_executable(&self, script_path: &str) -> DottResult<()>;
+    ) -> DotfResult<ExecutionResult>;
+    async fn has_permission(&self, script_path: &str) -> DotfResult<bool>;
+    async fn make_executable(&self, script_path: &str) -> DotfResult<()>;
 }
 
 #[cfg(test)]
@@ -92,7 +92,7 @@ pub mod tests {
 
     #[async_trait]
     impl ScriptExecutor for MockScriptExecutor {
-        async fn execute(&self, script_path: &str) -> DottResult<ExecutionResult> {
+        async fn execute(&self, script_path: &str) -> DotfResult<ExecutionResult> {
             self.executed_scripts
                 .lock()
                 .unwrap()
@@ -104,7 +104,7 @@ pub mod tests {
                 .get(script_path)
                 .cloned()
                 .ok_or_else(|| {
-                    crate::error::DottError::ScriptExecution(format!(
+                    crate::error::DotfError::ScriptExecution(format!(
                         "Script not found: {}",
                         script_path
                     ))
@@ -115,7 +115,7 @@ pub mod tests {
             &self,
             script_path: &str,
             args: &[String],
-        ) -> DottResult<ExecutionResult> {
+        ) -> DotfResult<ExecutionResult> {
             self.executed_scripts
                 .lock()
                 .unwrap()
@@ -127,14 +127,14 @@ pub mod tests {
                 .get(script_path)
                 .cloned()
                 .ok_or_else(|| {
-                    crate::error::DottError::ScriptExecution(format!(
+                    crate::error::DotfError::ScriptExecution(format!(
                         "Script not found: {}",
                         script_path
                     ))
                 })
         }
 
-        async fn has_permission(&self, script_path: &str) -> DottResult<bool> {
+        async fn has_permission(&self, script_path: &str) -> DotfResult<bool> {
             Ok(self
                 .permissions
                 .lock()
@@ -144,7 +144,7 @@ pub mod tests {
                 .unwrap_or(false))
         }
 
-        async fn make_executable(&self, script_path: &str) -> DottResult<()> {
+        async fn make_executable(&self, script_path: &str) -> DotfResult<()> {
             self.permissions
                 .lock()
                 .unwrap()
@@ -232,7 +232,7 @@ mod script_executor_tests {
 
         let result = executor.execute("nonexistent.sh").await;
         assert!(result.is_err());
-        if let Err(crate::error::DottError::ScriptExecution(msg)) = result {
+        if let Err(crate::error::DotfError::ScriptExecution(msg)) = result {
             assert!(msg.contains("Script not found"));
         } else {
             panic!("Expected ScriptExecution error");

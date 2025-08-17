@@ -1,18 +1,18 @@
 use clap::Parser;
-use dott::cli::args::{InstallTarget, SymlinksAction};
-use dott::cli::{
+use dotf::cli::args::{InstallTarget, SymlinksAction};
+use dotf::cli::{
     BackupEntry, Cli, Commands, InstallAnimation, InterruptionContext, InterruptionHandler,
     MessageFormatter, OperationResult, OperationStatus, Spinner, SymlinkDetail, UiComponents,
 };
-use dott::core::{
+use dotf::core::{
     filesystem::RealFileSystem, repository::GitRepository, scripts::SystemScriptExecutor,
 };
-use dott::error::{DottError, DottResult};
-use dott::services::{
+use dotf::error::{DotfError, DotfResult};
+use dotf::services::{
     ConfigService, EnhancedInitService, InstallService, StatusService, SyncService,
 };
-use dott::traits::prompt::Prompt;
-use dott::utils::ConsolePrompt;
+use dotf::traits::prompt::Prompt;
+use dotf::utils::ConsolePrompt;
 use std::process;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -27,7 +27,7 @@ async fn main() {
     }
 }
 
-async fn run() -> DottResult<()> {
+async fn run() -> DotfResult<()> {
     let cli = Cli::parse();
     let ui = UiComponents::new();
     let formatter = MessageFormatter::new();
@@ -68,7 +68,7 @@ async fn run() -> DottResult<()> {
                             // Show completion animation
                             animation.show_completion(&repo_url).await;
                         }
-                        Err(DottError::UserCancellation) => {
+                        Err(DotfError::UserCancellation) => {
                             // User pressed Ctrl+C during prompt, show cancellation message
                             interruption_handler.show_interruption_message(InterruptionContext::Initialization);
                             std::process::exit(130);
@@ -196,10 +196,10 @@ async fn run() -> DottResult<()> {
             } else {
                 // Show detailed status with beautiful formatting
                 if !status.initialized {
-                    println!("{}", formatter.error("Dott is not initialized"));
+                    println!("{}", formatter.error("Dotf is not initialized"));
                     println!(
                         "{}",
-                        formatter.info("Run 'dott init --repo <repository>' to get started")
+                        formatter.info("Run 'dotf init --repo <repository>' to get started")
                     );
                     return Ok(());
                 }
@@ -425,7 +425,7 @@ async fn run() -> DottResult<()> {
                             }
                         }
                     } else {
-                        return Err(DottError::Operation(
+                        return Err(DotfError::Operation(
                             "No restore action specified".to_string(),
                         ));
                     }
@@ -447,10 +447,10 @@ async fn run() -> DottResult<()> {
                     };
 
                     if !status.initialized {
-                        println!("{}", formatter.error("Dott is not initialized"));
+                        println!("{}", formatter.error("Dotf is not initialized"));
                         println!(
                             "{}",
-                            formatter.info("Run 'dott init --repo <repository>' to get started")
+                            formatter.info("Run 'dotf init --repo <repository>' to get started")
                         );
                         return Ok(());
                     }
@@ -501,7 +501,7 @@ async fn run() -> DottResult<()> {
                         spinner.finish_and_clear();
                         println!(
                             "{}",
-                            formatter.section("Repository Configuration (dott.toml)")
+                            formatter.section("Repository Configuration (dotf.toml)")
                         );
                         println!("{}", content);
                     }

@@ -5,7 +5,7 @@ use super::{
     backup::{BackupEntry, BackupManager},
     conflict::{ConflictInfo, ConflictResolver},
 };
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -61,7 +61,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
         &self,
         operations: &[SymlinkOperation],
         interactive: bool,
-    ) -> DottResult<Vec<BackupEntry>> {
+    ) -> DotfResult<Vec<BackupEntry>> {
         // Check for conflicts first
         let conflicts = self.check_conflicts(operations).await?;
 
@@ -72,7 +72,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
                 .resolve_all_conflicts_interactive(&conflicts)
                 .await?
         } else {
-            return Err(DottError::Operation(format!(
+            return Err(DotfError::Operation(format!(
                 "Found {} conflict(s) but running in non-interactive mode",
                 conflicts.len()
             )));
@@ -110,7 +110,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
     pub async fn check_conflicts(
         &self,
         operations: &[SymlinkOperation],
-    ) -> DottResult<Vec<ConflictInfo>> {
+    ) -> DotfResult<Vec<ConflictInfo>> {
         let mut conflicts = Vec::new();
 
         for operation in operations {
@@ -129,7 +129,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
     pub async fn get_symlink_status(
         &self,
         operations: &[SymlinkOperation],
-    ) -> DottResult<Vec<SymlinkInfo>> {
+    ) -> DotfResult<Vec<SymlinkInfo>> {
         let mut statuses = Vec::new();
 
         for operation in operations {
@@ -143,7 +143,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
     pub async fn get_single_symlink_status(
         &self,
         operation: &SymlinkOperation,
-    ) -> DottResult<SymlinkInfo> {
+    ) -> DotfResult<SymlinkInfo> {
         let target_exists = self.filesystem.exists(&operation.target_path).await?;
 
         if !target_exists {
@@ -198,7 +198,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
         }
     }
 
-    pub async fn remove_symlinks(&self, operations: &[SymlinkOperation]) -> DottResult<()> {
+    pub async fn remove_symlinks(&self, operations: &[SymlinkOperation]) -> DotfResult<()> {
         for operation in operations {
             let status = self.get_single_symlink_status(operation).await?;
 
@@ -213,7 +213,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
                     // Already doesn't exist, nothing to do
                 }
                 SymlinkStatus::Conflict => {
-                    return Err(DottError::Operation(format!(
+                    return Err(DotfError::Operation(format!(
                         "Cannot remove '{}': not a symlink",
                         operation.target_path
                     )));
@@ -227,7 +227,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
     pub async fn repair_symlinks(
         &self,
         operations: &[SymlinkOperation],
-    ) -> DottResult<Vec<BackupEntry>> {
+    ) -> DotfResult<Vec<BackupEntry>> {
         let mut backup_entries = Vec::new();
 
         for operation in operations {
@@ -293,7 +293,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
     pub async fn validate_sources(
         &self,
         operations: &[SymlinkOperation],
-    ) -> DottResult<Vec<String>> {
+    ) -> DotfResult<Vec<String>> {
         let mut missing_sources = Vec::new();
 
         for operation in operations {
@@ -310,7 +310,7 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
         operations: &[SymlinkOperation],
         repository: &R,
         repo_path: &str,
-    ) -> DottResult<Vec<SymlinkInfo>> {
+    ) -> DotfResult<Vec<SymlinkInfo>> {
         let mut statuses = Vec::new();
 
         for operation in operations {

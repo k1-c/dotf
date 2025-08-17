@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::core::{
-    config::DottConfig,
+    config::DotfConfig,
     symlinks::{BackupEntry, SymlinkManager, SymlinkOperation},
 };
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{
     filesystem::FileSystem,
     prompt::Prompt,
@@ -33,7 +33,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         &self.symlink_manager.backup_manager
     }
 
-    pub async fn install_dependencies(&self) -> DottResult<()> {
+    pub async fn install_dependencies(&self) -> DotfResult<()> {
         let config = self.load_config().await?;
         let platform = self.detect_platform();
 
@@ -43,7 +43,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
             "macos" => config.scripts.deps.macos,
             "linux" => config.scripts.deps.linux,
             _ => {
-                return Err(DottError::Platform(format!(
+                return Err(DotfError::Platform(format!(
                     "Unsupported platform: {}",
                     platform
                 )));
@@ -51,10 +51,10 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         };
 
         if let Some(script) = script_path {
-            let full_script_path = format!("{}/{}", self.filesystem.dott_repo_path(), script);
+            let full_script_path = format!("{}/{}", self.filesystem.dotf_repo_path(), script);
 
             if !self.filesystem.exists(&full_script_path).await? {
-                return Err(DottError::ScriptExecution(format!(
+                return Err(DotfError::ScriptExecution(format!(
                     "Dependency script not found: {}",
                     full_script_path
                 )));
@@ -73,7 +73,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(())
     }
 
-    pub async fn install_config(&self) -> DottResult<Vec<BackupEntry>> {
+    pub async fn install_config(&self) -> DotfResult<Vec<BackupEntry>> {
         let config = self.load_config().await?;
         let platform = self.detect_platform();
 
@@ -108,7 +108,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         // Validate all source files exist
         let missing_sources = self.symlink_manager.validate_sources(&operations).await?;
         if !missing_sources.is_empty() {
-            return Err(DottError::Config(format!(
+            return Err(DotfError::Config(format!(
                 "Missing source files: {}",
                 missing_sources.join(", ")
             )));
@@ -134,17 +134,17 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(backup_entries)
     }
 
-    pub async fn install_custom(&self, script_name: &str) -> DottResult<ExecutionResult> {
+    pub async fn install_custom(&self, script_name: &str) -> DotfResult<ExecutionResult> {
         let config = self.load_config().await?;
 
         let script_path = config.scripts.custom.get(script_name).ok_or_else(|| {
-            DottError::Config(format!("Custom script '{}' not found", script_name))
+            DotfError::Config(format!("Custom script '{}' not found", script_name))
         })?;
 
-        let full_script_path = format!("{}/{}", self.filesystem.dott_repo_path(), script_path);
+        let full_script_path = format!("{}/{}", self.filesystem.dotf_repo_path(), script_path);
 
         if !self.filesystem.exists(&full_script_path).await? {
-            return Err(DottError::ScriptExecution(format!(
+            return Err(DotfError::ScriptExecution(format!(
                 "Custom script file not found: {}",
                 full_script_path
             )));
@@ -164,7 +164,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(result)
     }
 
-    pub async fn install_all(&self) -> DottResult<Vec<BackupEntry>> {
+    pub async fn install_all(&self) -> DotfResult<Vec<BackupEntry>> {
         println!("=� Starting complete installation");
 
         // 1. Install dependencies first
@@ -218,7 +218,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(backup_entries)
     }
 
-    pub async fn uninstall_config(&self) -> DottResult<()> {
+    pub async fn uninstall_config(&self) -> DotfResult<()> {
         let config = self.load_config().await?;
         let platform = self.detect_platform();
 
@@ -255,7 +255,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(())
     }
 
-    pub async fn repair_config(&self) -> DottResult<Vec<BackupEntry>> {
+    pub async fn repair_config(&self) -> DotfResult<Vec<BackupEntry>> {
         let config = self.load_config().await?;
         let platform = self.detect_platform();
 
@@ -296,18 +296,18 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(backup_entries)
     }
 
-    async fn load_config(&self) -> DottResult<DottConfig> {
-        let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
+    async fn load_config(&self) -> DotfResult<DotfConfig> {
+        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
 
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config(
-                "dott.toml not found in repository".to_string(),
+            return Err(DotfError::Config(
+                "dotf.toml not found in repository".to_string(),
             ));
         }
 
         let content = self.filesystem.read_to_string(&config_path).await?;
-        let config: DottConfig = toml::from_str(&content)
-            .map_err(|e| DottError::Config(format!("Failed to parse dott.toml: {}", e)))?;
+        let config: DotfConfig = toml::from_str(&content)
+            .map_err(|e| DotfError::Config(format!("Failed to parse dotf.toml: {}", e)))?;
 
         Ok(config)
     }
@@ -315,15 +315,15 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
     async fn create_symlink_operations(
         &self,
         symlinks: &HashMap<String, String>,
-    ) -> DottResult<Vec<SymlinkOperation>> {
+    ) -> DotfResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         for (target, source) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
                 let home = dirs::home_dir().ok_or_else(|| {
-                    DottError::Operation("Could not determine home directory".to_string())
+                    DotfError::Operation("Could not determine home directory".to_string())
                 })?;
                 target.replacen("~", &home.to_string_lossy(), 1)
             } else {
@@ -350,10 +350,10 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         &self,
         script_path: &str,
         operation: &str,
-    ) -> DottResult<ExecutionResult> {
+    ) -> DotfResult<ExecutionResult> {
         // Check if script exists
         if !self.filesystem.exists(script_path).await? {
-            return Err(DottError::ScriptExecution(format!(
+            return Err(DotfError::ScriptExecution(format!(
                 "Script not found: {}",
                 script_path
             )));
@@ -370,7 +370,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         let result = self.script_executor.execute(script_path).await?;
 
         if !result.success {
-            return Err(DottError::ScriptExecution(format!(
+            return Err(DotfError::ScriptExecution(format!(
                 "{} failed with exit code {}: {}",
                 operation, result.exit_code, result.stderr
             )));
@@ -401,7 +401,7 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{DepsScripts, PlatformConfig, ScriptsConfig};
+    use crate::core::config::dotf_config::{DepsScripts, PlatformConfig, ScriptsConfig};
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         prompt::tests::MockPrompt,
@@ -409,7 +409,7 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    fn create_test_config() -> DottConfig {
+    fn create_test_config() -> DotfConfig {
         let mut symlinks = HashMap::new();
         symlinks.insert("~/.vimrc".to_string(), ".vimrc".to_string());
         symlinks.insert("~/.bashrc".to_string(), ".bashrc".to_string());
@@ -417,7 +417,7 @@ mod tests {
         let mut custom_scripts = HashMap::new();
         custom_scripts.insert("setup-vim".to_string(), "scripts/setup-vim.sh".to_string());
 
-        DottConfig {
+        DotfConfig {
             symlinks,
             scripts: ScriptsConfig {
                 deps: DepsScripts {
@@ -440,7 +440,7 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
@@ -448,12 +448,12 @@ mod tests {
         #[cfg(target_os = "macos")]
         let script_path = format!(
             "{}/scripts/install-deps-macos.sh",
-            filesystem.dott_repo_path()
+            filesystem.dotf_repo_path()
         );
         #[cfg(target_os = "linux")]
         let script_path = format!(
             "{}/scripts/install-deps-linux.sh",
-            filesystem.dott_repo_path()
+            filesystem.dotf_repo_path()
         );
         filesystem.add_file(&script_path, "#!/bin/bash\necho 'Installing dependencies'");
         script_executor.set_permission(&script_path, true);
@@ -482,7 +482,7 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
@@ -492,7 +492,7 @@ mod tests {
         let result = service.install_dependencies().await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DottError::ScriptExecution(_)));
+        assert!(matches!(result.unwrap_err(), DotfError::ScriptExecution(_)));
     }
 
     #[tokio::test]
@@ -505,17 +505,17 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
         // Setup source files
         filesystem.add_file(
-            &format!("{}/.vimrc", filesystem.dott_repo_path()),
+            &format!("{}/.vimrc", filesystem.dotf_repo_path()),
             "set number",
         );
         filesystem.add_file(
-            &format!("{}/.bashrc", filesystem.dott_repo_path()),
+            &format!("{}/.bashrc", filesystem.dotf_repo_path()),
             "alias ll='ls -la'",
         );
 
@@ -545,14 +545,14 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
         // Only create one source file (.vimrc), missing .bashrc
 
         filesystem.add_file(
-            &format!("{}/.vimrc", filesystem.dott_repo_path()),
+            &format!("{}/.vimrc", filesystem.dotf_repo_path()),
             "set number",
         );
 
@@ -560,7 +560,7 @@ mod tests {
         let result = service.install_config().await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DottError::Config(_)));
+        assert!(matches!(result.unwrap_err(), DotfError::Config(_)));
     }
 
     #[tokio::test]
@@ -573,12 +573,12 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
         // Setup custom script
-        let script_path = format!("{}/scripts/setup-vim.sh", filesystem.dott_repo_path());
+        let script_path = format!("{}/scripts/setup-vim.sh", filesystem.dotf_repo_path());
         filesystem.add_file(&script_path, "#!/bin/bash\necho 'Setting up Vim'");
         script_executor.set_permission(&script_path, true);
         script_executor.set_execution_result(
@@ -606,7 +606,7 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
@@ -614,7 +614,7 @@ mod tests {
         let result = service.install_custom("nonexistent-script").await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DottError::Config(_)));
+        assert!(matches!(result.unwrap_err(), DotfError::Config(_)));
     }
 
     #[tokio::test]
@@ -627,7 +627,7 @@ mod tests {
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
         filesystem.add_file(
-            &format!("{}/dott.toml", filesystem.dott_repo_path()),
+            &format!("{}/dotf.toml", filesystem.dotf_repo_path()),
             &config_content,
         );
 
@@ -638,14 +638,14 @@ mod tests {
 
         filesystem
             .create_symlink(
-                &format!("{}/.vimrc", filesystem.dott_repo_path()),
+                &format!("{}/.vimrc", filesystem.dotf_repo_path()),
                 &vimrc_target,
             )
             .await
             .unwrap();
         filesystem
             .create_symlink(
-                &format!("{}/.bashrc", filesystem.dott_repo_path()),
+                &format!("{}/.bashrc", filesystem.dotf_repo_path()),
                 &bashrc_target,
             )
             .await

@@ -1,3 +1,3 @@
 pub mod types;
 
-pub use types::{DottError, DottResult};
+pub use types::{DotfError, DotfResult};

@@ -1,4 +1,4 @@
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::prompt::Prompt;
 use async_trait::async_trait;
 use dialoguer::{Confirm, Input, Select};
@@ -20,7 +20,7 @@ impl ConsolePrompt {
 
 #[async_trait]
 impl Prompt for ConsolePrompt {
-    async fn input(&self, message: &str, default: Option<&str>) -> DottResult<String> {
+    async fn input(&self, message: &str, default: Option<&str>) -> DotfResult<String> {
         let message = message.to_string();
         let default = default.map(|s| s.to_string());
 
@@ -34,25 +34,25 @@ impl Prompt for ConsolePrompt {
             input.interact()
         })
         .await
-        .map_err(|e| DottError::Operation(format!("Task join error: {}", e)))?
-        .map_err(|e| DottError::Operation(format!("Input error: {}", e)))?;
+        .map_err(|e| DotfError::Operation(format!("Task join error: {}", e)))?
+        .map_err(|e| DotfError::Operation(format!("Input error: {}", e)))?;
 
         Ok(result)
     }
 
-    async fn confirm(&self, message: &str) -> DottResult<bool> {
+    async fn confirm(&self, message: &str) -> DotfResult<bool> {
         let message = message.to_string();
 
         let result =
             tokio::task::spawn_blocking(move || Confirm::new().with_prompt(&message).interact())
                 .await
-                .map_err(|e| DottError::Operation(format!("Task join error: {}", e)))?
-                .map_err(|e| DottError::Operation(format!("Confirm error: {}", e)))?;
+                .map_err(|e| DotfError::Operation(format!("Task join error: {}", e)))?
+                .map_err(|e| DotfError::Operation(format!("Confirm error: {}", e)))?;
 
         Ok(result)
     }
 
-    async fn select(&self, message: &str, options: &[(&str, &str)]) -> DottResult<usize> {
+    async fn select(&self, message: &str, options: &[(&str, &str)]) -> DotfResult<usize> {
         let items: Vec<String> = options
             .iter()
             .map(|(label, description)| {
@@ -69,8 +69,8 @@ impl Prompt for ConsolePrompt {
             Select::new().with_prompt(&message).items(&items).interact()
         })
         .await
-        .map_err(|e| DottError::Operation(format!("Task join error: {}", e)))?
-        .map_err(|e| DottError::Operation(format!("Select error: {}", e)))?;
+        .map_err(|e| DotfError::Operation(format!("Task join error: {}", e)))?
+        .map_err(|e| DotfError::Operation(format!("Select error: {}", e)))?;
 
         Ok(result)
     }

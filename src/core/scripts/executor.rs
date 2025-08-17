@@ -3,7 +3,7 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::script_executor::{ExecutionResult, ScriptExecutor};
 
 pub struct SystemScriptExecutor;
@@ -19,13 +19,13 @@ impl SystemScriptExecutor {
         Self
     }
 
-    async fn check_and_set_permissions(&self, script_path: &str) -> DottResult<()> {
+    async fn check_and_set_permissions(&self, script_path: &str) -> DotfResult<()> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DotfError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -37,7 +37,7 @@ impl SystemScriptExecutor {
                 let new_permissions = std::fs::Permissions::from_mode(new_mode);
                 fs::set_permissions(script_path, new_permissions)
                     .await
-                    .map_err(DottError::Io)?;
+                    .map_err(DotfError::Io)?;
             }
         }
 
@@ -71,7 +71,7 @@ impl SystemScriptExecutor {
         &self,
         script_path: &str,
         args: &[String],
-    ) -> DottResult<ExecutionResult> {
+    ) -> DotfResult<ExecutionResult> {
         let script_extension = std::path::Path::new(script_path)
             .extension()
             .and_then(|ext| ext.to_str())
@@ -107,17 +107,17 @@ impl SystemScriptExecutor {
 
         let mut child = command
             .spawn()
-            .map_err(|e| DottError::ScriptExecution(format!("Failed to spawn process: {}", e)))?;
+            .map_err(|e| DotfError::ScriptExecution(format!("Failed to spawn process: {}", e)))?;
 
         // Capture output streams
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| DottError::ScriptExecution("Failed to capture stdout".to_string()))?;
+            .ok_or_else(|| DotfError::ScriptExecution("Failed to capture stdout".to_string()))?;
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| DottError::ScriptExecution("Failed to capture stderr".to_string()))?;
+            .ok_or_else(|| DotfError::ScriptExecution("Failed to capture stderr".to_string()))?;
 
         // Read output in parallel
         let stdout_handle = tokio::spawn(async move {
@@ -142,16 +142,16 @@ impl SystemScriptExecutor {
 
         // Wait for process to complete
         let exit_status = child.wait().await.map_err(|e| {
-            DottError::ScriptExecution(format!("Failed to wait for process: {}", e))
+            DotfError::ScriptExecution(format!("Failed to wait for process: {}", e))
         })?;
 
         // Collect output
         let stdout_output = stdout_handle
             .await
-            .map_err(|e| DottError::ScriptExecution(format!("Failed to read stdout: {}", e)))?;
+            .map_err(|e| DotfError::ScriptExecution(format!("Failed to read stdout: {}", e)))?;
         let stderr_output = stderr_handle
             .await
-            .map_err(|e| DottError::ScriptExecution(format!("Failed to read stderr: {}", e)))?;
+            .map_err(|e| DotfError::ScriptExecution(format!("Failed to read stderr: {}", e)))?;
 
         let exit_code = exit_status.code().unwrap_or(-1);
         let success = exit_status.success();
@@ -167,7 +167,7 @@ impl SystemScriptExecutor {
 
 #[async_trait]
 impl ScriptExecutor for SystemScriptExecutor {
-    async fn execute(&self, script_path: &str) -> DottResult<ExecutionResult> {
+    async fn execute(&self, script_path: &str) -> DotfResult<ExecutionResult> {
         self.execute_with_args(script_path, &[]).await
     }
 
@@ -175,10 +175,10 @@ impl ScriptExecutor for SystemScriptExecutor {
         &self,
         script_path: &str,
         args: &[String],
-    ) -> DottResult<ExecutionResult> {
+    ) -> DotfResult<ExecutionResult> {
         // Check if script exists
         if tokio::fs::metadata(script_path).await.is_err() {
-            return Err(DottError::ScriptExecution(format!(
+            return Err(DotfError::ScriptExecution(format!(
                 "Script not found: {}",
                 script_path
             )));
@@ -191,13 +191,13 @@ impl ScriptExecutor for SystemScriptExecutor {
         self.execute_command(script_path, args).await
     }
 
-    async fn has_permission(&self, script_path: &str) -> DottResult<bool> {
+    async fn has_permission(&self, script_path: &str) -> DotfResult<bool> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DotfError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -218,13 +218,13 @@ impl ScriptExecutor for SystemScriptExecutor {
         }
     }
 
-    async fn make_executable(&self, script_path: &str) -> DottResult<()> {
+    async fn make_executable(&self, script_path: &str) -> DotfResult<()> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             use tokio::fs;
 
-            let metadata = fs::metadata(script_path).await.map_err(DottError::Io)?;
+            let metadata = fs::metadata(script_path).await.map_err(DotfError::Io)?;
 
             let permissions = metadata.permissions();
             let mode = permissions.mode();
@@ -235,7 +235,7 @@ impl ScriptExecutor for SystemScriptExecutor {
 
             fs::set_permissions(script_path, new_permissions)
                 .await
-                .map_err(DottError::Io)?;
+                .map_err(DotfError::Io)?;
         }
 
         #[cfg(windows)]
@@ -364,7 +364,7 @@ echo "stderr message" >&2
         let result = executor.execute("/nonexistent/script.sh").await;
 
         assert!(result.is_err());
-        if let Err(DottError::ScriptExecution(msg)) = result {
+        if let Err(DotfError::ScriptExecution(msg)) = result {
             assert!(msg.contains("Script not found"));
         } else {
             panic!("Expected ScriptExecution error");

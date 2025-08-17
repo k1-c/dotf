@@ -1,10 +1,10 @@
-# dott.toml 設定仕様書
+# dotf.toml 設定仕様書
 
-本ドキュメントでは、dottツールの設定ファイル `dott.toml` の詳細な仕様について説明します。
+本ドキュメントでは、dotfツールの設定ファイル `dotf.toml` の詳細な仕様について説明します。
 
 ## 概要
 
-`dott.toml` は、dotfilesリポジトリのルートディレクトリまたは `.dott/` サブディレクトリに配置する設定ファイルです。TOML形式で記述し、シンボリックリンク設定、スクリプト設定、プラットフォーム固有設定を定義します。
+`dotf.toml` は、dotfilesリポジトリのルートディレクトリまたは `.dotf/` サブディレクトリに配置する設定ファイルです。TOML形式で記述し、シンボリックリンク設定、スクリプト設定、プラットフォーム固有設定を定義します。
 
 ## 基本構造
 
@@ -151,10 +151,10 @@ setup-python = "scripts/setup-python-env.sh"
 
 ```bash
 # 特定のカスタムスクリプトを実行
-dott install setup-vim
+dotf install setup-vim
 
 # すべてのカスタムスクリプトを対話的に実行
-dott install all
+dotf install all
 ```
 
 ### `[platform.<os>]` - プラットフォーム固有設定
@@ -262,7 +262,7 @@ setup-python = "scripts/setup-python-environment.sh"
 
 ```
 dotfiles/
-├── dott.toml
+├── dotf.toml
 ├── scripts/
 │   ├── install-homebrew-packages.sh
 │   ├── install-apt-packages.sh
@@ -284,7 +284,7 @@ dotfiles/
 
 ### エラー処理
 
-- ソースファイルが存在しない場合、`dott install config` は失敗
+- ソースファイルが存在しない場合、`dotf install config` は失敗
 - 既存ファイルとの競合時は、対話的にバックアップまたはスキップを選択
 - スクリプト実行エラー時は、詳細なエラーメッセージを表示
 
@@ -292,11 +292,11 @@ dotfiles/
 
 ```bash
 # 設定ファイルの構文チェック
-dott config --repo
+dotf config --repo
 
 # シンボリックリンクの状態確認
-dott symlinks
+dotf symlinks
 
 # 全体的な状態確認
-dott status
+dotf status
 ```

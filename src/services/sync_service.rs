@@ -1,7 +1,7 @@
 use chrono::Utc;
 
 use crate::core::config::Settings;
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{filesystem::FileSystem, repository::Repository};
 
 pub struct SyncService<R, F> {
@@ -17,23 +17,23 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         }
     }
 
-    pub async fn sync(&self, force: bool) -> DottResult<SyncResult> {
-        // Check if dott is initialized
-        let settings_path = self.filesystem.dott_settings_path();
+    pub async fn sync(&self, force: bool) -> DotfResult<SyncResult> {
+        // Check if dotf is initialized
+        let settings_path = self.filesystem.dotf_settings_path();
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Operation(
-                "Dott not initialized. Run 'dott init' first.".to_string(),
+            return Err(DotfError::Operation(
+                "Dotf not initialized. Run 'dotf init' first.".to_string(),
             ));
         }
 
         // Load current settings
         let settings = self.load_settings().await?;
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         // Check if repository exists
         if !self.filesystem.exists(&repo_path).await? {
-            return Err(DottError::Repository(
-                "Repository directory not found. Run 'dott init' to reinitialize.".to_string(),
+            return Err(DotfError::Repository(
+                "Repository directory not found. Run 'dotf init' to reinitialize.".to_string(),
             ));
         }
 
@@ -41,7 +41,7 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         let status_before = self.repository.get_status(&repo_path).await?;
 
         if !status_before.is_clean && !force {
-            return Err(DottError::Operation(
+            return Err(DotfError::Operation(
                 "Repository has uncommitted changes. Use --force to sync anyway, or commit your changes first.".to_string()
             ));
         }
@@ -61,7 +61,7 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
 
         let settings_content = updated_settings
             .to_toml()
-            .map_err(|e| DottError::Serialization(e.to_string()))?;
+            .map_err(|e| DotfError::Serialization(e.to_string()))?;
 
         self.filesystem
             .write(&settings_path, &settings_content)
@@ -79,13 +79,13 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         })
     }
 
-    pub async fn check_sync_status(&self) -> DottResult<SyncStatus> {
-        let settings_path = self.filesystem.dott_settings_path();
+    pub async fn check_sync_status(&self) -> DotfResult<SyncStatus> {
+        let settings_path = self.filesystem.dotf_settings_path();
         if !self.filesystem.exists(&settings_path).await? {
             return Ok(SyncStatus::NotInitialized);
         }
 
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
         if !self.filesystem.exists(&repo_path).await? {
             return Ok(SyncStatus::RepositoryMissing);
         }
@@ -121,12 +121,12 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
         })
     }
 
-    async fn load_settings(&self) -> DottResult<Settings> {
-        let settings_path = self.filesystem.dott_settings_path();
+    async fn load_settings(&self) -> DotfResult<Settings> {
+        let settings_path = self.filesystem.dotf_settings_path();
         let content = self.filesystem.read_to_string(&settings_path).await?;
 
         let settings: Settings = Settings::from_toml(&content)
-            .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
+            .map_err(|e| DotfError::Serialization(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)
     }
@@ -218,8 +218,8 @@ mod tests {
         };
 
         let settings_content = settings.to_toml().unwrap();
-        filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
-        filesystem.add_directory(&filesystem.dott_repo_path());
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+        filesystem.add_directory(&filesystem.dotf_repo_path());
 
         let result = service.sync(false).await.unwrap();
 
@@ -256,8 +256,8 @@ mod tests {
         };
 
         let settings_content = settings.to_toml().unwrap();
-        filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
-        filesystem.add_directory(&filesystem.dott_repo_path());
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+        filesystem.add_directory(&filesystem.dotf_repo_path());
 
         let result = service.sync(false).await;
         assert!(result.is_err());
@@ -283,8 +283,8 @@ mod tests {
         };
 
         let settings_content = settings.to_toml().unwrap();
-        filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
-        filesystem.add_directory(&filesystem.dott_repo_path());
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+        filesystem.add_directory(&filesystem.dotf_repo_path());
 
         let status = service.check_sync_status().await.unwrap();
 
@@ -321,8 +321,8 @@ mod tests {
         };
 
         let settings_content = settings.to_toml().unwrap();
-        filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
-        filesystem.add_directory(&filesystem.dott_repo_path());
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+        filesystem.add_directory(&filesystem.dotf_repo_path());
 
         let status = service.check_sync_status().await.unwrap();
 

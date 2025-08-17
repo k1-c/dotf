@@ -1,10 +1,10 @@
-//! ASCII art logo and branding for Dott
+//! ASCII art logo and branding for Dotf
 
 use crate::cli::ui::Theme;
 use std::time::Duration;
 use tokio::time::sleep;
 
-/// ASCII art logo for Dott
+/// ASCII art logo for Dotf
 pub struct Logo {
     theme: Theme,
 }
@@ -23,27 +23,27 @@ impl Logo {
         }
     }
 
-    /// Get the main Dott logo
+    /// Get the main Dotf logo
     pub fn main_logo(&self) -> String {
         let logo = r#"
     ██████╗  ██████╗ ████████╗████████╗
     ██╔══██╗██╔═══██╗╚══██╔══╝╚══██╔══╝
-    ██║  ██║██║   ██║   ██║      ██║   
-    ██║  ██║██║   ██║   ██║      ██║   
-    ██████╔╝╚██████╔╝   ██║      ██║   
-    ╚═════╝  ╚═════╝    ╚═╝      ╚═╝   
+    ██║  ██║██║   ██║   ██║      ██║
+    ██║  ██║██║   ██║   ██║      ██║
+    ██████╔╝╚██████╔╝   ██║      ██║
+    ╚═════╝  ╚═════╝    ╚═╝      ╚═╝
 "#;
         self.theme.primary(logo)
     }
 
-    /// Get the compact Dott logo
+    /// Get the compact Dotf logo
     pub fn compact_logo(&self) -> String {
         let logo = r#"
    ██████╗  ██████╗ ████████╗████████╗
    ██╔══██╗██╔═══██╗╚══██╔══╝╚══██╔══╝
-   ██║  ██║██║   ██║   ██║      ██║   
-   ██████╔╝╚██████╔╝   ██║      ██║   
-   ╚═════╝  ╚═════╝    ╚═╝      ╚═╝   
+   ██║  ██║██║   ██║   ██║      ██║
+   ██████╔╝╚██████╔╝   ██║      ██║
+   ╚═════╝  ╚═════╝    ╚═╝      ╚═╝
 "#;
         self.theme.primary(logo)
     }
@@ -109,11 +109,11 @@ impl InstallStage {
     /// Get the display message for this stage
     pub fn message(&self) -> &'static str {
         match self {
-            InstallStage::Welcome => "Setting up dott",
+            InstallStage::Welcome => "Setting up dotf",
             InstallStage::ValidatingRepository => "Validating repository URL",
             InstallStage::SelectingBranch => "Selecting branch",
             InstallStage::FetchingConfiguration => "Fetching configuration from repository",
-            InstallStage::SettingUpDirectories => "Setting up dott directories",
+            InstallStage::SettingUpDirectories => "Setting up dotf directories",
             InstallStage::CloningRepository => "Cloning dotfiles repository",
             InstallStage::CreatingSymlinks => "Creating symbolic links",
             InstallStage::FinalizeSetup => "Finalizing setup",
@@ -176,7 +176,7 @@ impl InstallAnimation {
     /// Show the welcome screen with logo
     pub async fn show_welcome(&self, version: &str) {
         println!("{}", self.logo.welcome_banner(version));
-        self.typewriter_effect("Initializing dott configuration...", 30)
+        self.typewriter_effect("Initializing dotf configuration...", 30)
             .await;
         sleep(Duration::from_millis(500)).await;
     }
@@ -210,15 +210,15 @@ impl InstallAnimation {
 
         println!("\n{}", self.theme.accent("What's next?"));
         println!(
-            "  {} Run 'dott status' to see your setup",
+            "  {} Run 'dotf status' to see your setup",
             self.theme.primary("→")
         );
         println!(
-            "  {} Run 'dott install config' to create symlinks",
+            "  {} Run 'dotf install config' to create symlinks",
             self.theme.primary("→")
         );
         println!(
-            "  {} Run 'dott sync' to sync with remote",
+            "  {} Run 'dotf sync' to sync with remote",
             self.theme.primary("→")
         );
 

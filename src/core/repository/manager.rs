@@ -1,5 +1,5 @@
-use crate::core::config::DottConfig;
-use crate::error::DottResult;
+use crate::core::config::DotfConfig;
+use crate::error::DotfResult;
 use crate::traits::repository::{Repository, RepositoryStatus};
 use std::sync::Arc;
 
@@ -20,7 +20,7 @@ where
         }
     }
 
-    pub async fn validate_and_fetch_config(&self, url: &str) -> DottResult<DottConfig> {
+    pub async fn validate_and_fetch_config(&self, url: &str) -> DotfResult<DotfConfig> {
         // First validate the remote repository
         self.repository.validate_remote(url).await?;
 
@@ -28,19 +28,19 @@ where
         self.repository.fetch_config(url).await
     }
 
-    pub async fn clone_repository(&self, url: &str, destination: &str) -> DottResult<()> {
+    pub async fn clone_repository(&self, url: &str, destination: &str) -> DotfResult<()> {
         Repository::clone(&*self.repository, url, destination).await
     }
 
-    pub async fn sync_repository(&self, repo_path: &str) -> DottResult<()> {
+    pub async fn sync_repository(&self, repo_path: &str) -> DotfResult<()> {
         self.repository.pull(repo_path).await
     }
 
-    pub async fn get_repository_status(&self, repo_path: &str) -> DottResult<RepositoryStatus> {
+    pub async fn get_repository_status(&self, repo_path: &str) -> DotfResult<RepositoryStatus> {
         self.repository.get_status(repo_path).await
     }
 
-    pub async fn get_remote_url(&self, repo_path: &str) -> DottResult<String> {
+    pub async fn get_remote_url(&self, repo_path: &str) -> DotfResult<String> {
         self.repository.get_remote_url(repo_path).await
     }
 }
@@ -53,10 +53,10 @@ mod tests {
     #[tokio::test]
     async fn test_repository_manager_validate_and_fetch() {
         let mut mock_repo = MockRepository::new();
-        mock_repo.set_config_response(DottConfig {
+        mock_repo.set_config_response(DotfConfig {
             symlinks: std::collections::HashMap::new(),
-            scripts: crate::core::config::dott_config::ScriptsConfig::default(),
-            platform: crate::core::config::dott_config::PlatformConfig::default(),
+            scripts: crate::core::config::dotf_config::ScriptsConfig::default(),
+            platform: crate::core::config::dotf_config::PlatformConfig::default(),
         });
 
         let manager = RepositoryManager::new(mock_repo);

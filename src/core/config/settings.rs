@@ -1,4 +1,4 @@
-use crate::error::DottResult;
+use crate::error::DotfResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -54,11 +54,11 @@ impl Settings {
         }
     }
 
-    pub fn from_toml(toml: &str) -> DottResult<Self> {
+    pub fn from_toml(toml: &str) -> DotfResult<Self> {
         toml::from_str(toml).map_err(|e| e.into())
     }
 
-    pub fn to_toml(&self) -> DottResult<String> {
+    pub fn to_toml(&self) -> DotfResult<String> {
         toml::to_string_pretty(self).map_err(|e| e.into())
     }
 }

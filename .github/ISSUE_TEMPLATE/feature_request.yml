@@ -55,7 +55,7 @@ body:
         - Low - Nice to have
         - Medium - Would be helpful
         - High - Important for my workflow
-        - Critical - Blocking my use of dott
+        - Critical - Blocking my use of dotf
     validations:
       required: true
 

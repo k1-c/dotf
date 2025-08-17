@@ -1,59 +1,59 @@
-use crate::error::DottResult;
+use crate::error::DotfResult;
 use async_trait::async_trait;
 use std::path::PathBuf;
 
 #[async_trait]
 pub trait FileSystem: Send + Sync {
-    async fn exists(&self, path: &str) -> DottResult<bool>;
-    async fn create_dir_all(&self, path: &str) -> DottResult<()>;
-    async fn create_symlink(&self, source: &str, target: &str) -> DottResult<()>;
-    async fn remove_file(&self, path: &str) -> DottResult<()>;
-    async fn remove_dir(&self, path: &str) -> DottResult<()>;
-    async fn copy_file(&self, source: &str, target: &str) -> DottResult<()>;
-    async fn read_to_string(&self, path: &str) -> DottResult<String>;
-    async fn write(&self, path: &str, content: &str) -> DottResult<()>;
-    async fn is_symlink(&self, path: &str) -> DottResult<bool>;
-    async fn read_link(&self, path: &str) -> DottResult<PathBuf>;
+    async fn exists(&self, path: &str) -> DotfResult<bool>;
+    async fn create_dir_all(&self, path: &str) -> DotfResult<()>;
+    async fn create_symlink(&self, source: &str, target: &str) -> DotfResult<()>;
+    async fn remove_file(&self, path: &str) -> DotfResult<()>;
+    async fn remove_dir(&self, path: &str) -> DotfResult<()>;
+    async fn copy_file(&self, source: &str, target: &str) -> DotfResult<()>;
+    async fn read_to_string(&self, path: &str) -> DotfResult<String>;
+    async fn write(&self, path: &str, content: &str) -> DotfResult<()>;
+    async fn is_symlink(&self, path: &str) -> DotfResult<bool>;
+    async fn read_link(&self, path: &str) -> DotfResult<PathBuf>;
 
-    // Dott specific path operations
-    fn dott_directory(&self) -> String {
+    // Dotf specific path operations
+    fn dotf_directory(&self) -> String {
         dirs::home_dir()
             .unwrap_or_default()
-            .join(".dott")
+            .join(".dotf")
             .to_string_lossy()
             .to_string()
     }
 
-    fn dott_repo_path(&self) -> String {
+    fn dotf_repo_path(&self) -> String {
         dirs::home_dir()
             .unwrap_or_default()
-            .join(".dott")
+            .join(".dotf")
             .join("repo")
             .to_string_lossy()
             .to_string()
     }
 
-    fn dott_settings_path(&self) -> String {
+    fn dotf_settings_path(&self) -> String {
         dirs::home_dir()
             .unwrap_or_default()
-            .join(".dott")
+            .join(".dotf")
             .join("settings.toml")
             .to_string_lossy()
             .to_string()
     }
 
-    fn dott_backup_path(&self) -> String {
+    fn dotf_backup_path(&self) -> String {
         dirs::home_dir()
             .unwrap_or_default()
-            .join(".dott")
+            .join(".dotf")
             .join("backups")
             .to_string_lossy()
             .to_string()
     }
 
-    async fn create_dott_directory(&self) -> DottResult<()> {
-        let dott_dir = self.dott_directory();
-        self.create_dir_all(&dott_dir).await
+    async fn create_dotf_directory(&self) -> DotfResult<()> {
+        let dotf_dir = self.dotf_directory();
+        self.create_dir_all(&dotf_dir).await
     }
 }
 
@@ -103,7 +103,7 @@ pub mod tests {
 
     #[async_trait]
     impl FileSystem for MockFileSystem {
-        async fn exists(&self, path: &str) -> DottResult<bool> {
+        async fn exists(&self, path: &str) -> DotfResult<bool> {
             let files = self.files.lock().unwrap();
             let dirs = self.directories.lock().unwrap();
             let symlinks = self.symlinks.lock().unwrap();
@@ -112,12 +112,12 @@ pub mod tests {
                 || symlinks.contains_key(path))
         }
 
-        async fn create_dir_all(&self, path: &str) -> DottResult<()> {
+        async fn create_dir_all(&self, path: &str) -> DotfResult<()> {
             self.directories.lock().unwrap().push(path.to_string());
             Ok(())
         }
 
-        async fn create_symlink(&self, source: &str, target: &str) -> DottResult<()> {
+        async fn create_symlink(&self, source: &str, target: &str) -> DotfResult<()> {
             self.symlinks
                 .lock()
                 .unwrap()
@@ -125,13 +125,13 @@ pub mod tests {
             Ok(())
         }
 
-        async fn remove_file(&self, path: &str) -> DottResult<()> {
+        async fn remove_file(&self, path: &str) -> DotfResult<()> {
             self.files.lock().unwrap().remove(path);
             self.symlinks.lock().unwrap().remove(path);
             Ok(())
         }
 
-        async fn remove_dir(&self, path: &str) -> DottResult<()> {
+        async fn remove_dir(&self, path: &str) -> DotfResult<()> {
             // Remove directory itself
             self.directories.lock().unwrap().retain(|p| p != path);
 
@@ -160,7 +160,7 @@ pub mod tests {
             Ok(())
         }
 
-        async fn copy_file(&self, source: &str, target: &str) -> DottResult<()> {
+        async fn copy_file(&self, source: &str, target: &str) -> DotfResult<()> {
             let content = {
                 let files = self.files.lock().unwrap();
                 files.get(source).cloned()
@@ -174,21 +174,21 @@ pub mod tests {
             Ok(())
         }
 
-        async fn read_to_string(&self, path: &str) -> DottResult<String> {
+        async fn read_to_string(&self, path: &str) -> DotfResult<String> {
             self.files
                 .lock()
                 .unwrap()
                 .get(path)
                 .cloned()
                 .ok_or_else(|| {
-                    crate::error::DottError::Io(std::io::Error::new(
+                    crate::error::DotfError::Io(std::io::Error::new(
                         std::io::ErrorKind::NotFound,
                         "File not found",
                     ))
                 })
         }
 
-        async fn write(&self, path: &str, content: &str) -> DottResult<()> {
+        async fn write(&self, path: &str, content: &str) -> DotfResult<()> {
             self.files
                 .lock()
                 .unwrap()
@@ -196,18 +196,18 @@ pub mod tests {
             Ok(())
         }
 
-        async fn is_symlink(&self, path: &str) -> DottResult<bool> {
+        async fn is_symlink(&self, path: &str) -> DotfResult<bool> {
             Ok(self.symlinks.lock().unwrap().contains_key(path))
         }
 
-        async fn read_link(&self, path: &str) -> DottResult<PathBuf> {
+        async fn read_link(&self, path: &str) -> DotfResult<PathBuf> {
             self.symlinks
                 .lock()
                 .unwrap()
                 .get(path)
                 .map(PathBuf::from)
                 .ok_or_else(|| {
-                    crate::error::DottError::Io(std::io::Error::new(
+                    crate::error::DotfError::Io(std::io::Error::new(
                         std::io::ErrorKind::NotFound,
                         "Symlink not found",
                     ))
@@ -287,13 +287,13 @@ mod filesystem_tests {
     }
 
     #[tokio::test]
-    async fn test_dott_paths() {
+    async fn test_dotf_paths() {
         let fs = MockFileSystem::new();
 
-        // Test that dott paths are properly formatted
-        assert!(fs.dott_directory().ends_with(".dott"));
-        assert!(fs.dott_repo_path().ends_with(".dott/repo"));
-        assert!(fs.dott_settings_path().ends_with(".dott/settings.toml"));
-        assert!(fs.dott_backup_path().ends_with(".dott/backups"));
+        // Test that dotf paths are properly formatted
+        assert!(fs.dotf_directory().ends_with(".dotf"));
+        assert!(fs.dotf_repo_path().ends_with(".dotf/repo"));
+        assert!(fs.dotf_settings_path().ends_with(".dotf/settings.toml"));
+        assert!(fs.dotf_backup_path().ends_with(".dotf/backups"));
     }
 }

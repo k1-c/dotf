@@ -1,23 +1,23 @@
-# Dott Specification
+# Dotf Specification
 
 ## Overview
 
-Dottは、リモートリポジトリからdotfilesを取得・管理・同期するためのコマンドラインツールです。
+Dotfは、リモートリポジトリからdotfilesを取得・管理・同期するためのコマンドラインツールです。
 リモートの更新チェックやリモート・ローカルでの変更の同期、シンボリックリンクの自動管理、依存関係のインストール、安全なバックアップ機能を提供します。
 
 ## 全体仕様
 
 ### アーキテクチャ
 
-- **設定ディレクトリ**: `~/.dott/`
-- **デフォルトのリポジトリクローン先**: `~/.dott/repo/`
-- **ローカル設定**: `~/.dott/settings.json`
-- **バックアップ**: `~/.dott/backups/{timestamp}/`
+- **設定ディレクトリ**: `~/.dotf/`
+- **デフォルトのリポジトリクローン先**: `~/.dotf/repo/`
+- **ローカル設定**: `~/.dotf/settings.json`
+- **バックアップ**: `~/.dotf/backups/{timestamp}/`
 
 ### 設定ファイル
 
-#### dott.toml（リポジトリ内）
-リポジトリのルートに配置するか、.dott/dott.tomlとして配置します。
+#### dotf.toml（リポジトリ内）
+リポジトリのルートに配置するか、.dotf/dotf.tomlとして配置します。
 
 ```toml
 [symlinks]
@@ -32,8 +32,8 @@ linux = "スクリプトパス"
 ```
 
 #### settings.json（ローカル）
-ローカル設定ファイルは、dottの初期化時に自動生成されます。
-~/.dott/settings.jsonとして配置されます。
+ローカル設定ファイルは、dotfの初期化時に自動生成されます。
+~/.dotf/settings.jsonとして配置されます。
 
 ```json
 {
@@ -55,39 +55,39 @@ linux = "スクリプトパス"
 
 ## コマンド仕様
 
-### `dott init`
+### `dotf init`
 
-リモートリポジトリからdottを初期化します。
+リモートリポジトリからdotfを初期化します。
 
 **機能**:
 - リモートリポジトリの指定（コマンドライン引数または対話的入力）
-- 設定ファイル（dott.toml）の検証
+- 設定ファイル（dotf.toml）の検証
 - ローカル環境の構築
 
 **コマンド形式**:
 ```bash
 # オプション引数でURL指定
-dott init --repo <repository_url>
+dotf init --repo <repository_url>
 
 # 対話的入力（引数なし）
-dott init
+dotf init
 ```
 
 **処理内容**:
 1. リポジトリURL取得（`--repo`指定または対話的入力）
 2. リポジトリURLの妥当性確認
-3. リモートリポジトリから`dott.toml`を取得・検証
-4. `~/.dott/`ディレクトリ作成
-5. リポジトリを`~/.dott/repo/`にクローン
-6. `~/.dott/settings.json`を作成
+3. リモートリポジトリから`dotf.toml`を取得・検証
+4. `~/.dotf/`ディレクトリ作成
+5. リポジトリを`~/.dotf/repo/`にクローン
+6. `~/.dotf/settings.json`を作成
 
 **対話的入力例**:
 ```
-$ dott init
+$ dotf init
 ? Repository URL: https://github.com/username/dotfiles.git
 🔍 Validating repository...
 ✅ Repository validation successful
-📁 Creating ~/.dott/ directory...
+📁 Creating ~/.dotf/ directory...
 🔄 Cloning repository...
 ✅ Initialization complete!
 ```
@@ -98,9 +98,9 @@ $ dott init
 **エラーケース**:
 - 無効なURL
 - アクセス不可能なリポジトリ
-- `dott.toml`の不存在・不正
+- `dotf.toml`の不存在・不正
 
-### `dott install deps`
+### `dotf install deps`
 
 システム依存関係をインストールします。
 
@@ -132,7 +132,7 @@ linux = "scripts/install-deps-linux.sh"
 - スクリプト実行権限の不足
 - スクリプト実行エラー
 
-### `dott install config`
+### `dotf install config`
 
 設定ファイルのシンボリックリンクを作成します。
 
@@ -153,7 +153,7 @@ linux = "scripts/install-deps-linux.sh"
 - ターゲットディレクトリの作成失敗
 - 権限エラー
 
-### `dott install <custom>`
+### `dotf install <custom>`
 
 カスタムインストールスクリプトを実行します。
 
@@ -173,7 +173,7 @@ linux = "scripts/install-deps-linux.sh"
 - 実行権限の不足
 - スクリプト実行エラー
 
-### `dott status`
+### `dotf status`
 
 現在の状態を表示します。
 
@@ -191,7 +191,7 @@ linux = "scripts/install-deps-linux.sh"
 **オプション**:
 - `--quiet`: 簡潔な表示
 
-### `dott symlinks`
+### `dotf symlinks`
 
 シンボリックリンクの詳細状態を一覧表示します。
 
@@ -205,7 +205,7 @@ linux = "scripts/install-deps-linux.sh"
 - ⚠️ エラー（ソース不存在など）
 - 🔄 バックアップ済み
 
-### `dott symlinks restore`
+### `dotf symlinks restore`
 
 バックアップからファイルを復元します。
 
@@ -218,7 +218,7 @@ linux = "scripts/install-deps-linux.sh"
 - `--all`: 全ファイルの一括復元
 - `<filepath>`: 特定ファイルの復元
 
-### `dott sync`
+### `dotf sync`
 
 リモートリポジトリと同期します。
 
@@ -236,7 +236,7 @@ linux = "scripts/install-deps-linux.sh"
 **オプション**:
 - `--force`: ローカル変更を無視して強制同期
 
-### `dott config`
+### `dotf config`
 
 設定の表示・編集を行います。
 
@@ -245,7 +245,7 @@ linux = "scripts/install-deps-linux.sh"
 - ローカル設定の編集
 
 **オプション**:
-- `--repo`: リポジトリ設定（dott.toml）を表示
+- `--repo`: リポジトリ設定（dotf.toml）を表示
 - `--edit`: ローカル設定（settings.json）を編集
 
 ## テストケース
@@ -254,112 +254,112 @@ linux = "scripts/install-deps-linux.sh"
 
 **正常な初期化（オプション指定）**
 - 前提: 有効なリモートリポジトリURL
-- 実行: `dott init --repo https://github.com/user/dotfiles.git`
-- 期待: `~/.dott/`構築、リポジトリクローン、設定ファイル作成
+- 実行: `dotf init --repo https://github.com/user/dotfiles.git`
+- 期待: `~/.dotf/`構築、リポジトリクローン、設定ファイル作成
 
 **正常な初期化（対話的入力）**
 - 前提: 有効なリモートリポジトリURL
-- 実行: `dott init` → URL入力プロンプト
-- 期待: 対話的にURL入力、`~/.dott/`構築、リポジトリクローン、設定ファイル作成
+- 実行: `dotf init` → URL入力プロンプト
+- 期待: 対話的にURL入力、`~/.dotf/`構築、リポジトリクローン、設定ファイル作成
 
 **無効なリポジトリ**
 - 前提: 存在しないリポジトリURL
-- 実行: `dott init --repo https://github.com/invalid/repo.git`
+- 実行: `dotf init --repo https://github.com/invalid/repo.git`
 - 期待: エラーメッセージ、ローカルファイル未作成
 
 **対話的入力でのキャンセル**
 - 前提: 対話的入力でユーザーがキャンセル
-- 実行: `dott init` → Ctrl+C または空入力
+- 実行: `dotf init` → Ctrl+C または空入力
 - 期待: 処理中断、ローカルファイル未作成
 
 **設定ファイル不備**
-- 前提: `dott.toml`が存在しないリポジトリ
-- 実行: `dott init <repository_without_config>`
+- 前提: `dotf.toml`が存在しないリポジトリ
+- 実行: `dotf init <repository_without_config>`
 - 期待: 設定ファイル不備エラー、初期化中断
 
 ### 依存関係インストールテスト
 
 **正常な依存関係インストール（macOS）**
 - 前提: 初期化済み、macOS環境、有効なスクリプト設定
-- 実行: `dott install deps`
+- 実行: `dotf install deps`
 - 期待: `[scripts.deps]`の`macos`スクリプト実行
 
 **正常な依存関係インストール（Linux）**
 - 前提: 初期化済み、Linux環境、有効なスクリプト設定
-- 実行: `dott install deps`
+- 実行: `dotf install deps`
 - 期待: `[scripts.deps]`の`linux`スクリプト実行
 
 **未対応プラットフォーム**
 - 前提: Windows環境
-- 実行: `dott install deps`
+- 実行: `dotf install deps`
 - 期待: 未対応プラットフォームエラー
 
 **依存関係スクリプト設定不在**
 - 前提: プラットフォーム対応設定が`[scripts.deps]`に存在しない
-- 実行: `dott install deps`
+- 実行: `dotf install deps`
 - 期待: 設定不在エラー
 
 ### 設定インストールテスト
 
 **正常なシンボリンク作成**
 - 前提: 競合のない環境
-- 実行: `dott install config`
+- 実行: `dotf install config`
 - 期待: 設定通りのシンボリンク作成
 
 **ファイル競合の処理**
 - 前提: 既存ファイルが存在
-- 実行: `dott install config`
+- 実行: `dotf install config`
 - 期待: 競合選択肢の提示、バックアップまたは中断
 
 **シンボリンク状態の表示**
 - 前提: 一部シンボリンクが作成済み
-- 実行: `dott symlinks`
+- 実行: `dotf symlinks`
 - 期待: 各シンボリンクの状態表示
 
 ### カスタムインストールテスト
 
 **正常なカスタムスクリプト実行**
 - 前提: 有効なカスタムスクリプト設定
-- 実行: `dott install vim-plugins`
+- 実行: `dotf install vim-plugins`
 - 期待: 指定スクリプト実行
 
 **存在しないカスタムスクリプト**
 - 前提: 設定にないスクリプト名
-- 実行: `dott install non-existent-script`
+- 実行: `dotf install non-existent-script`
 - 期待: エラーメッセージ
 
 ### ステータス表示テスト
 
 **正常なステータス表示**
 - 前提: 初期化済み環境
-- 実行: `dott status`
+- 実行: `dotf status`
 - 期待: リポジトリ情報、シンボリンク状況、依存関係状況の表示
 
 **未初期化環境**
-- 前提: dottが初期化されていない
-- 実行: `dott status`
+- 前提: dotfが初期化されていない
+- 実行: `dotf status`
 - 期待: 未初期化メッセージ
 
 ### 同期テスト
 
 **正常な同期**
 - 前提: リモートに新しいコミットが存在
-- 実行: `dott sync`
+- 実行: `dotf sync`
 - 期待: ローカルリポジトリ更新、必要に応じたシンボリンク再作成
 
 **競合のある同期**
 - 前提: ローカルに未コミットの変更
-- 実行: `dott sync`
+- 実行: `dotf sync`
 - 期待: 競合警告、`--force`オプション案内
 
 ### バックアップ・復元テスト
 
 **バックアップからの復元**
 - 前提: バックアップが存在
-- 実行: `dott symlinks restore ~/.zshrc`
+- 実行: `dotf symlinks restore ~/.zshrc`
 - 期待: 指定ファイルのバックアップからの復元
 
 **バックアップ一覧表示**
 - 前提: 複数のバックアップが存在
-- 実行: `dott symlinks restore --list`
+- 実行: `dotf symlinks restore --list`
 - 期待: 利用可能なバックアップの一覧表示

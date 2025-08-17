@@ -1,18 +1,18 @@
-use crate::core::config::DottConfig;
-use crate::error::{DottError, DottResult};
+use crate::core::config::DotfConfig;
+use crate::error::{DotfError, DotfResult};
 
-pub fn validate_config(config: &DottConfig) -> DottResult<()> {
+pub fn validate_config(config: &DotfConfig) -> DotfResult<()> {
     // Validate symlinks
     for (source, target) in &config.symlinks {
         if source.is_empty() || target.is_empty() {
-            return Err(DottError::Validation(
+            return Err(DotfError::Validation(
                 "Symlink source and target cannot be empty".to_string(),
             ));
         }
 
         // Check for dangerous paths
         if target == "/" || target == "~" {
-            return Err(DottError::Validation(format!(
+            return Err(DotfError::Validation(format!(
                 "Dangerous symlink target: {}",
                 target
             )));
@@ -22,7 +22,7 @@ pub fn validate_config(config: &DottConfig) -> DottResult<()> {
     // Validate scripts
     if let Some(macos_script) = &config.scripts.deps.macos {
         if macos_script.is_empty() {
-            return Err(DottError::Validation(
+            return Err(DotfError::Validation(
                 "macOS dependency script path cannot be empty".to_string(),
             ));
         }
@@ -30,7 +30,7 @@ pub fn validate_config(config: &DottConfig) -> DottResult<()> {
 
     if let Some(linux_script) = &config.scripts.deps.linux {
         if linux_script.is_empty() {
-            return Err(DottError::Validation(
+            return Err(DotfError::Validation(
                 "Linux dependency script path cannot be empty".to_string(),
             ));
         }
@@ -38,7 +38,7 @@ pub fn validate_config(config: &DottConfig) -> DottResult<()> {
 
     for (name, script) in &config.scripts.custom {
         if name.is_empty() || script.is_empty() {
-            return Err(DottError::Validation(
+            return Err(DotfError::Validation(
                 "Custom script name and path cannot be empty".to_string(),
             ));
         }
@@ -50,11 +50,11 @@ pub fn validate_config(config: &DottConfig) -> DottResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{PlatformConfig, ScriptsConfig};
+    use crate::core::config::dotf_config::{PlatformConfig, ScriptsConfig};
     use std::collections::HashMap;
 
-    fn create_valid_config() -> DottConfig {
-        DottConfig {
+    fn create_valid_config() -> DotfConfig {
+        DotfConfig {
             symlinks: HashMap::new(),
             scripts: ScriptsConfig::default(),
             platform: PlatformConfig::default(),
@@ -74,7 +74,7 @@ mod tests {
 
         let result = validate_config(&config);
         assert!(result.is_err());
-        if let Err(DottError::Validation(msg)) = result {
+        if let Err(DotfError::Validation(msg)) = result {
             assert!(msg.contains("cannot be empty"));
         } else {
             panic!("Expected validation error");
@@ -90,7 +90,7 @@ mod tests {
 
         let result = validate_config(&config);
         assert!(result.is_err());
-        if let Err(DottError::Validation(msg)) = result {
+        if let Err(DotfError::Validation(msg)) = result {
             assert!(msg.contains("Dangerous symlink target"));
         } else {
             panic!("Expected validation error");
@@ -117,7 +117,7 @@ mod tests {
 
         let result = validate_config(&config);
         assert!(result.is_err());
-        if let Err(DottError::Validation(msg)) = result {
+        if let Err(DotfError::Validation(msg)) = result {
             assert!(msg.contains("macOS dependency script"));
         } else {
             panic!("Expected validation error");

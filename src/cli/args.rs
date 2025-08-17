@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "dott")]
+#[command(name = "dotf")]
 #[command(about = "A modern dotfile management tool")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(author = "k1-c")]
@@ -12,7 +12,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Initialize dott with a remote repository
+    /// Initialize dotf with a remote repository
     Init {
         /// Repository URL
         #[arg(long)]
@@ -40,9 +40,9 @@ pub enum Commands {
         #[command(subcommand)]
         action: Option<SymlinksAction>,
     },
-    /// View and edit dott configuration
+    /// View and edit dotf configuration
     Config {
-        /// Show repository configuration (dott.toml)
+        /// Show repository configuration (dotf.toml)
         #[arg(long)]
         repo: bool,
         /// Edit local settings (settings.json)

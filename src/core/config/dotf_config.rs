@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct DottConfig {
+pub struct DotfConfig {
     #[serde(default)]
     pub symlinks: HashMap<String, String>,
     #[serde(default)]

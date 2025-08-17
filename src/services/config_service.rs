@@ -1,5 +1,5 @@
-use crate::core::config::{DottConfig, Settings};
-use crate::error::{DottError, DottResult};
+use crate::core::config::{DotfConfig, Settings};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt};
 
 pub struct ConfigService<F, P> {
@@ -12,40 +12,40 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         Self { filesystem, prompt }
     }
 
-    pub async fn show_repository_config(&self) -> DottResult<String> {
-        let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
+    pub async fn show_repository_config(&self) -> DotfResult<String> {
+        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
 
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config(
-                "Repository configuration file (dott.toml) not found".to_string(),
+            return Err(DotfError::Config(
+                "Repository configuration file (dotf.toml) not found".to_string(),
             ));
         }
 
         self.filesystem.read_to_string(&config_path).await
     }
 
-    pub async fn show_settings(&self) -> DottResult<Settings> {
-        let settings_path = self.filesystem.dott_settings_path();
+    pub async fn show_settings(&self) -> DotfResult<Settings> {
+        let settings_path = self.filesystem.dotf_settings_path();
 
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Config(
-                "Settings file not found. Run 'dott init' first.".to_string(),
+            return Err(DotfError::Config(
+                "Settings file not found. Run 'dotf init' first.".to_string(),
             ));
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
         let settings: Settings = Settings::from_toml(&content)
-            .map_err(|e| DottError::Serialization(format!("Failed to parse settings: {}", e)))?;
+            .map_err(|e| DotfError::Serialization(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)
     }
 
-    pub async fn edit_settings(&self) -> DottResult<()> {
-        let settings_path = self.filesystem.dott_settings_path();
+    pub async fn edit_settings(&self) -> DotfResult<()> {
+        let settings_path = self.filesystem.dotf_settings_path();
 
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::Config(
-                "Settings file not found. Run 'dott init' first.".to_string(),
+            return Err(DotfError::Config(
+                "Settings file not found. Run 'dotf init' first.".to_string(),
             ));
         }
 
@@ -90,7 +90,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
             let settings_content = updated_settings
                 .to_toml()
-                .map_err(|e| DottError::Serialization(e.to_string()))?;
+                .map_err(|e| DotfError::Serialization(e.to_string()))?;
 
             self.filesystem
                 .write(&settings_path, &settings_content)
@@ -104,13 +104,13 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         Ok(())
     }
 
-    pub async fn validate_config(&self) -> DottResult<ConfigValidationResult> {
-        let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
+    pub async fn validate_config(&self) -> DotfResult<ConfigValidationResult> {
+        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
 
         if !self.filesystem.exists(&config_path).await? {
             return Ok(ConfigValidationResult {
                 is_valid: false,
-                errors: vec!["Repository configuration file (dott.toml) not found".to_string()],
+                errors: vec!["Repository configuration file (dotf.toml) not found".to_string()],
                 warnings: vec![],
                 config: None,
             });
@@ -118,12 +118,12 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
 
         let content = self.filesystem.read_to_string(&config_path).await?;
 
-        let config: DottConfig = match toml::from_str(&content) {
+        let config: DotfConfig = match toml::from_str(&content) {
             Ok(config) => config,
             Err(e) => {
                 return Ok(ConfigValidationResult {
                     is_valid: false,
-                    errors: vec![format!("Failed to parse dott.toml: {}", e)],
+                    errors: vec![format!("Failed to parse dotf.toml: {}", e)],
                     warnings: vec![],
                     config: None,
                 });
@@ -134,7 +134,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         let mut warnings = Vec::new();
 
         // Validate symlinks
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         for (target, source) in &config.symlinks {
             let source_path = format!("{}/{}", repo_path, source);
@@ -193,7 +193,7 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         })
     }
 
-    pub async fn show_config_summary(&self) -> DottResult<ConfigSummary> {
+    pub async fn show_config_summary(&self) -> DotfResult<ConfigSummary> {
         let validation = self.validate_config().await?;
 
         if !validation.is_valid {
@@ -245,7 +245,7 @@ pub struct ConfigValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
-    pub config: Option<DottConfig>,
+    pub config: Option<DotfConfig>,
 }
 
 #[derive(Debug)]
@@ -261,7 +261,7 @@ pub struct ConfigSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::config::dott_config::{DepsScripts, ScriptsConfig};
+    use crate::core::config::dotf_config::{DepsScripts, ScriptsConfig};
     use crate::core::config::settings::Repository;
     use crate::traits::{filesystem::tests::MockFileSystem, prompt::tests::MockPrompt};
     use chrono::Utc;
@@ -278,7 +278,7 @@ mod tests {
         (service, filesystem, prompt)
     }
 
-    fn create_test_config() -> DottConfig {
+    fn create_test_config() -> DotfConfig {
         let mut symlinks = HashMap::new();
         symlinks.insert(".vimrc".to_string(), "vim/vimrc".to_string());
         symlinks.insert(".bashrc".to_string(), "bash/bashrc".to_string());
@@ -286,7 +286,7 @@ mod tests {
         let mut custom_scripts = HashMap::new();
         custom_scripts.insert("setup".to_string(), "scripts/setup.sh".to_string());
 
-        DottConfig {
+        DotfConfig {
             symlinks,
             scripts: ScriptsConfig {
                 deps: DepsScripts {
@@ -305,7 +305,7 @@ mod tests {
 
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
-        let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
+        let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
 
         filesystem.add_file(&config_path, &config_content);
 
@@ -338,7 +338,7 @@ mod tests {
         };
 
         let settings_content = settings.to_toml().unwrap();
-        filesystem.add_file(&filesystem.dott_settings_path(), &settings_content);
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
 
         let result = service.show_settings().await.unwrap();
         assert_eq!(result.repository.remote, "https://github.com/user/dotfiles");
@@ -350,12 +350,12 @@ mod tests {
 
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
-        let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
+        let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
 
         filesystem.add_file(&config_path, &config_content);
 
         // Add source files to avoid warnings
-        let repo_path = filesystem.dott_repo_path();
+        let repo_path = filesystem.dotf_repo_path();
         filesystem.add_file(&format!("{}/vim/vimrc", repo_path), "\" vim config");
         filesystem.add_file(&format!("{}/bash/bashrc", repo_path), "# bash config");
         filesystem.add_file(
@@ -376,7 +376,7 @@ mod tests {
 
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
-        let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
+        let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
 
         filesystem.add_file(&config_path, &config_content);
         // Don't add source files to trigger warnings
@@ -394,7 +394,7 @@ mod tests {
 
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
-        let config_path = format!("{}/dott.toml", filesystem.dott_repo_path());
+        let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
 
         filesystem.add_file(&config_path, &config_content);
 

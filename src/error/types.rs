@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-pub type DottResult<T> = Result<T, DottError>;
+pub type DotfResult<T> = Result<T, DotfError>;
 
 #[derive(Error, Debug)]
-pub enum DottError {
+pub enum DotfError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -40,7 +40,7 @@ pub enum DottError {
     #[error("Network error: {0}")]
     Network(String),
 
-    #[error("Not initialized: Please run 'dott init' first")]
+    #[error("Not initialized: Please run 'dotf init' first")]
     NotInitialized,
 
     #[error("Operation error: {0}")]
@@ -50,32 +50,32 @@ pub enum DottError {
     Platform(String),
 }
 
-impl From<toml::de::Error> for DottError {
+impl From<toml::de::Error> for DotfError {
     fn from(err: toml::de::Error) -> Self {
-        DottError::Serialization(err.to_string())
+        DotfError::Serialization(err.to_string())
     }
 }
 
-impl From<toml::ser::Error> for DottError {
+impl From<toml::ser::Error> for DotfError {
     fn from(err: toml::ser::Error) -> Self {
-        DottError::Serialization(err.to_string())
+        DotfError::Serialization(err.to_string())
     }
 }
 
-impl From<serde_json::Error> for DottError {
+impl From<serde_json::Error> for DotfError {
     fn from(err: serde_json::Error) -> Self {
-        DottError::Serialization(err.to_string())
+        DotfError::Serialization(err.to_string())
     }
 }
 
-impl From<git2::Error> for DottError {
+impl From<git2::Error> for DotfError {
     fn from(err: git2::Error) -> Self {
-        DottError::Git(err.to_string())
+        DotfError::Git(err.to_string())
     }
 }
 
-impl From<reqwest::Error> for DottError {
+impl From<reqwest::Error> for DotfError {
     fn from(err: reqwest::Error) -> Self {
-        DottError::Network(err.to_string())
+        DotfError::Network(err.to_string())
     }
 }

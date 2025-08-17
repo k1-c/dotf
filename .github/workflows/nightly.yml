@@ -81,12 +81,12 @@ jobs:
     - name: Create nightly binary artifact
       run: |
         mkdir -p nightly-build
-        cp target/release/dott nightly-build/dott-nightly-$(date +%Y%m%d)
-        
+        cp target/release/dotf nightly-build/dotf-nightly-$(date +%Y%m%d)
+
     - name: Upload nightly artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dott-nightly-${{ github.run_id }}
+        name: dotf-nightly-${{ github.run_id }}
         path: nightly-build/
         retention-days: 7
 

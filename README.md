@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚙️ Dott ⚡
+# ⚙️ dotf ⚡
 
 **Modern Dotfiles Manager**
 
@@ -10,11 +10,11 @@ _Sync your environment / configurations across machines in seconds_
 
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Crates.io](https://img.shields.io/crates/v/dott.svg?style=for-the-badge)](https://crates.io/crates/dott)
-[![GitHub release](https://img.shields.io/github/release/k1-c/dott.svg?style=for-the-badge)](https://github.com/k1-c/dott/releases)
+[![Crates.io](https://img.shields.io/crates/v/dotf.svg?style=for-the-badge)](https://crates.io/crates/dotf)
+[![GitHub release](https://img.shields.io/github/release/k1-c/dotf.svg?style=for-the-badge)](https://github.com/k1-c/dotf/releases)
 
 ```bash
-curl -sSL dott-install.sh | sh
+curl -sSL dotf-install.sh | sh
 ```
 
 _One command to rule them all_ ⚡
@@ -23,7 +23,7 @@ _One command to rule them all_ ⚡
 
 ---
 
-**Dott** transforms how you manage dotfiles. Install and synchronize your development environment from remote repositories with intelligent conflict resolution, automatic dependency management, and beautiful CLI feedback. From zero to configured in minutes.
+**Dotf** transforms how you manage dotfiles. Install and synchronize your development environment from remote repositories with intelligent conflict resolution, automatic dependency management, and beautiful CLI feedback. From zero to configured in minutes.
 
 ## ✨ Features
 
@@ -43,39 +43,39 @@ _One command to rule them all_ ⚡
 
 ```bash
 # Install via cargo
-cargo install dott
+cargo install dotf
 
 # Or use the one-liner installer
-curl -sSL dott-install.sh | sh
+curl -sSL dotf-install.sh | sh
 ```
 
 ### Initialize from Remote Repository
 
 ```bash
-# Initialize dott with a remote repository (with interactive branch selection)
-dott init --repo https://github.com/username/dotfiles.git
+# Initialize dotf with a remote repository (with interactive branch selection)
+dotf init --repo https://github.com/username/dotfiles.git
 
 # Or initialize without specifying URL (will prompt for URL and branch)
-dott init
+dotf init
 
 # Install system dependencies
-dott install deps
+dotf install deps
 
 # Install configuration symlinks
-dott install config
+dotf install config
 ```
 
 ### Check Status
 
 ```bash
 # Check current status and sync information
-dott status
+dotf status
 
 # View symlink status
-dott symlinks
+dotf symlinks
 
 # Sync with remote repository
-dott sync
+dotf sync
 ```
 
 ## 📖 Usage
@@ -84,15 +84,15 @@ dott sync
 
 | Command                 | Description                              |
 | ----------------------- | ---------------------------------------- |
-| `dott init`             | Initialize dott with a remote repository |
-| `dott install deps`     | Install system dependencies              |
-| `dott install config`   | Create configuration symlinks            |
-| `dott install <custom>` | Run custom installation scripts          |
-| `dott status`           | Show repository sync status              |
-| `dott symlinks`         | List symlinks and their status           |
-| `dott symlinks restore` | Restore files from backup                |
-| `dott sync`             | Sync with remote repository              |
-| `dott config`           | View and edit dott configuration         |
+| `dotf init`             | Initialize dotf with a remote repository |
+| `dotf install deps`     | Install system dependencies              |
+| `dotf install config`   | Create configuration symlinks            |
+| `dotf install <custom>` | Run custom installation scripts          |
+| `dotf status`           | Show repository sync status              |
+| `dotf symlinks`         | List symlinks and their status           |
+| `dotf symlinks restore` | Restore files from backup                |
+| `dotf sync`             | Sync with remote repository              |
+| `dotf config`           | View and edit dotf configuration         |
 
 ### Workflow
 
@@ -100,7 +100,7 @@ dott sync
 
 ```bash
 # Initialize with remote repository
-dott init --repo https://github.com/username/dotfiles.git
+dotf init --repo https://github.com/username/dotfiles.git
 ```
 
 This command:
@@ -108,15 +108,15 @@ This command:
 - Detects and displays the repository's default branch
 - Prompts for branch selection with validation
 - Validates the remote repository structure and configuration
-- Creates `~/.dott/` directory
-- Clones the specified branch to `~/.dott/repo/`
-- Creates `~/.dott/settings.toml` for local configuration
+- Creates `~/.dotf/` directory
+- Clones the specified branch to `~/.dotf/repo/`
+- Creates `~/.dotf/settings.toml` for local configuration
 
 #### 2. Dependency Installation
 
 ```bash
 # Install system dependencies (languages, tools, etc.)
-dott install deps
+dotf install deps
 ```
 
 Executes dependency installation scripts based on your platform.
@@ -125,12 +125,12 @@ Executes dependency installation scripts based on your platform.
 
 ```bash
 # Install configuration symlinks
-dott install config
+dotf install config
 ```
 
 Creates symbolic links according to your configuration. If conflicts exist:
 
-- Prompts to backup existing files to `~/.dott/backups/`
+- Prompts to backup existing files to `~/.dotf/backups/`
 - Option to abort installation
 - Safe conflict resolution
 
@@ -138,15 +138,15 @@ Creates symbolic links according to your configuration. If conflicts exist:
 
 ```bash
 # Run custom installation scripts
-dott install vim-plugins
-dott install zsh-setup
+dotf install vim-plugins
+dotf install zsh-setup
 ```
 
 Execute custom installation scripts defined in your configuration.
 
 ## 🔧 Repository Configuration
 
-Your dotfiles repository should contain a `dott.toml` configuration file:
+Your dotfiles repository should contain a `dotf.toml` configuration file:
 
 ```toml
 [symlinks]
@@ -174,7 +174,7 @@ font-install = "scripts/install-fonts.sh"
 
 ```
 my-dotfiles/
-├── dott.toml              # Configuration file
+├── dotf.toml              # Configuration file
 ├── README.md
 ├── nvim/                  # Neovim configuration
 │   ├── init.vim
@@ -203,7 +203,7 @@ my-dotfiles/
 
 ## 🔧 Local Configuration
 
-Dott creates `~/.dott/settings.toml` for local configuration:
+Dotf creates `~/.dotf/settings.toml` for local configuration:
 
 ```toml
 last_sync = 2024-01-15T10:30:00Z
@@ -212,7 +212,7 @@ initialized_at = 2024-01-15T09:00:00Z
 [repository]
 remote = "https://github.com/username/dotfiles.git"
 branch = "main"
-local = "/home/user/.dott/repo"
+local = "/home/user/.dotf/repo"
 ```
 
 ## 🎯 Status and Monitoring
@@ -220,12 +220,12 @@ local = "/home/user/.dott/repo"
 ### Status Output
 
 ```bash
-$ dott status
+$ dotf status
 
 📁 Repository: https://github.com/username/dotfiles.git
 ├── 🌿 Branch: main
 ├── 🔄 Status: 2 commits behind origin/main
-├── 📂 Local: ~/.dott/repo
+├── 📂 Local: ~/.dotf/repo
 └── ⏰ Last sync: 2 hours ago
 
 📁 Symlinks: 8 total, 6 active, 2 conflicts
@@ -236,12 +236,12 @@ $ dott status
 ### Symlinks Status
 
 ```bash
-$ dott symlinks
+$ dotf symlinks
 
 📁 Configuration Symlinks
-├── ✅ ~/.zshrc → ~/.dott/repo/zsh/zshrc
-├── ✅ ~/.tmux.conf → ~/.dott/repo/tmux/tmux.conf
-├── ✅ ~/.config/nvim → ~/.dott/repo/nvim
+├── ✅ ~/.zshrc → ~/.dotf/repo/zsh/zshrc
+├── ✅ ~/.tmux.conf → ~/.dotf/repo/tmux/tmux.conf
+├── ✅ ~/.config/nvim → ~/.dotf/repo/nvim
 ├── ❌ ~/.gitconfig (conflict: exists, not symlinked)
 ├── ⚠️  ~/.config/alacritty (missing target)
 └── 🔄 ~/.vimrc (backed up, symlink active)
@@ -255,9 +255,9 @@ Add to your shell configuration for sync monitoring:
 
 ```bash
 # .zshrc or .bashrc
-# Check dott status on shell startup
-if command -v dott >/dev/null 2>&1; then
-    dott status --quiet
+# Check dotf status on shell startup
+if command -v dotf >/dev/null 2>&1; then
+    dotf status --quiet
 fi
 ```
 
@@ -267,26 +267,26 @@ fi
 
 ```bash
 # Check for updates
-dott status
+dotf status
 
 # Sync with remote repository
-dott sync
+dotf sync
 
 # Force sync (override local changes)
-dott sync --force
+dotf sync --force
 ```
 
 ### Backup and Restore
 
 ```bash
 # List available backups
-dott symlinks restore --list
+dotf symlinks restore --list
 
 # Restore specific file from backup
-dott symlinks restore ~/.gitconfig
+dotf symlinks restore ~/.gitconfig
 
 # Restore all backed up files
-dott symlinks restore --all
+dotf symlinks restore --all
 ```
 
 ## 🎨 Configuration Management
@@ -294,14 +294,14 @@ dott symlinks restore --all
 ### View Configuration
 
 ```bash
-# View current dott configuration
-dott config
+# View current dotf configuration
+dotf config
 
 # View repository configuration
-dott config --repo
+dotf config --repo
 
 # Edit local settings
-dott config --edit
+dotf config --edit
 ```
 
 ### Custom Installation Scripts
@@ -327,8 +327,8 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/p
 Run custom scripts:
 
 ```bash
-dott install vim-plugins
-dott install setup-zsh
+dotf install vim-plugins
+dotf install setup-zsh
 ```
 
 ## 📋 Common Workflows
@@ -337,20 +337,20 @@ dott install setup-zsh
 
 ```bash
 # 1. Initialize with your dotfiles repository (will prompt for branch selection)
-dott init https://github.com/myuser/dotfiles.git
+dotf init https://github.com/myuser/dotfiles.git
 
 # 2. Install system dependencies
-dott install deps
+dotf install deps
 
 # 3. Install configuration symlinks
-dott install config
+dotf install config
 
 # 4. Run custom setup scripts
-dott install vim-plugins
-dott install zsh-setup
+dotf install vim-plugins
+dotf install zsh-setup
 
 # 5. Check final status
-dott status
+dotf status
 ```
 
 The init process will:
@@ -364,23 +364,23 @@ The init process will:
 
 ```bash
 # Check for updates (add to shell startup)
-dott status
+dotf status
 
 # Sync when updates available
-dott sync
+dotf sync
 
 # Check symlink health
-dott symlinks
+dotf symlinks
 ```
 
 ### Backup and Recovery
 
 ```bash
 # Before major changes, ensure backups
-dott symlinks restore --list
+dotf symlinks restore --list
 
 # If something breaks, restore from backup
-dott symlinks restore ~/.zshrc
+dotf symlinks restore ~/.zshrc
 ```
 
 ## 🚧 Development
@@ -390,8 +390,8 @@ dott symlinks restore ~/.zshrc
 ### Building from Source
 
 ```bash
-git clone https://github.com/k1-c/dott.git
-cd dott
+git clone https://github.com/k1-c/dotf.git
+cd dotf
 cargo build --release
 ```
 

@@ -25,8 +25,8 @@ body:
       label: Steps to reproduce
       description: Please provide detailed steps to reproduce the issue
       placeholder: |
-        1. Run `dott init ...`
-        2. Execute `dott install ...`
+        1. Run `dotf init ...`
+        2. Execute `dotf install ...`
         3. See error
     validations:
       required: true
@@ -38,7 +38,7 @@ body:
       description: Please provide information about your environment
       placeholder: |
         - OS: [e.g. Ubuntu 22.04, macOS 14.0, Windows 11]
-        - Dott version: [e.g. 0.1.0]
+        - Dotf version: [e.g. 0.1.0]
         - Rust version: [e.g. 1.75.0]
         - Terminal: [e.g. iTerm2, Windows Terminal, GNOME Terminal]
     validations:
@@ -55,7 +55,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/k1-c/dott/blob/main/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/k1-c/dotf/blob/main/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true

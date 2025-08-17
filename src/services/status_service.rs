@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::core::{
-    config::{DottConfig, Settings},
+    config::{DotfConfig, Settings},
     symlinks::{SymlinkManager, SymlinkOperation, SymlinkStatus},
 };
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{
     filesystem::FileSystem,
     prompt::Prompt,
@@ -14,7 +14,7 @@ use crate::traits::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DottStatus {
+pub struct DotfStatus {
     pub initialized: bool,
     pub repository: Option<RepositoryStatusInfo>,
     pub symlinks: SymlinksStatusInfo,
@@ -72,20 +72,20 @@ struct ConsolePrompt;
 
 #[async_trait]
 impl Prompt for ConsolePrompt {
-    async fn input(&self, _message: &str, _default: Option<&str>) -> DottResult<String> {
-        Err(DottError::Operation(
+    async fn input(&self, _message: &str, _default: Option<&str>) -> DotfResult<String> {
+        Err(DotfError::Operation(
             "Prompt not available in status service".to_string(),
         ))
     }
 
-    async fn confirm(&self, _message: &str) -> DottResult<bool> {
-        Err(DottError::Operation(
+    async fn confirm(&self, _message: &str) -> DotfResult<bool> {
+        Err(DotfError::Operation(
             "Prompt not available in status service".to_string(),
         ))
     }
 
-    async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DottResult<usize> {
-        Err(DottError::Operation(
+    async fn select(&self, _message: &str, _options: &[(&str, &str)]) -> DotfResult<usize> {
+        Err(DotfError::Operation(
             "Prompt not available in status service".to_string(),
         ))
     }
@@ -102,11 +102,11 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         }
     }
 
-    pub async fn get_status(&self) -> DottResult<DottStatus> {
+    pub async fn get_status(&self) -> DotfResult<DotfStatus> {
         let initialized = self.is_initialized().await?;
 
         if !initialized {
-            return Ok(DottStatus {
+            return Ok(DotfStatus {
                 initialized: false,
                 repository: None,
                 symlinks: SymlinksStatusInfo {
@@ -125,7 +125,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
                     symlinks_count: 0,
                     custom_scripts_count: 0,
                     has_platform_config: false,
-                    errors: vec!["Dott is not initialized".to_string()],
+                    errors: vec!["Dotf is not initialized".to_string()],
                 },
             });
         }
@@ -134,7 +134,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         let config_status = self.get_config_status().await?;
         let symlinks_status = self.get_symlinks_status().await?;
 
-        Ok(DottStatus {
+        Ok(DotfStatus {
             initialized: true,
             repository: Some(repository_status),
             symlinks: symlinks_status,
@@ -142,9 +142,9 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         })
     }
 
-    pub async fn get_repository_status(&self) -> DottResult<RepositoryStatusInfo> {
+    pub async fn get_repository_status(&self) -> DotfResult<RepositoryStatusInfo> {
         let settings = self.load_settings().await?;
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         let status = self.repository.get_status(&repo_path).await?;
 
@@ -156,7 +156,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         })
     }
 
-    pub async fn get_symlinks_status(&self) -> DottResult<SymlinksStatusInfo> {
+    pub async fn get_symlinks_status(&self) -> DotfResult<SymlinksStatusInfo> {
         let config = match self.load_config().await {
             Ok(config) => config,
             Err(_) => {
@@ -193,7 +193,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         }
 
         let operations = self.create_symlink_operations(&symlinks).await?;
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
         let symlink_infos = self
             .symlink_manager
             .get_symlink_status_with_changes(&operations, &self.repository, &repo_path)
@@ -231,8 +231,8 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         Ok(status_info)
     }
 
-    pub async fn get_config_status(&self) -> DottResult<ConfigStatusInfo> {
-        let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
+    pub async fn get_config_status(&self) -> DotfResult<ConfigStatusInfo> {
+        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
         let errors = Vec::new();
 
         if !self.filesystem.exists(&config_path).await? {
@@ -242,7 +242,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
                 symlinks_count: 0,
                 custom_scripts_count: 0,
                 has_platform_config: false,
-                errors: vec!["Configuration file dott.toml not found".to_string()],
+                errors: vec!["Configuration file dotf.toml not found".to_string()],
             });
         }
 
@@ -273,12 +273,12 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         })
     }
 
-    pub async fn print_status(&self) -> DottResult<()> {
+    pub async fn print_status(&self) -> DotfResult<()> {
         let status = self.get_status().await?;
 
         if !status.initialized {
-            println!("❌ Dott is not initialized");
-            println!("   Run 'dott init <repository-url>' to get started");
+            println!("❌ Dotf is not initialized");
+            println!("   Run 'dotf init <repository-url>' to get started");
             return Ok(());
         }
 
@@ -314,40 +314,40 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         Ok(())
     }
 
-    async fn is_initialized(&self) -> DottResult<bool> {
-        let settings_path = self.filesystem.dott_settings_path();
-        let repo_path = self.filesystem.dott_repo_path();
+    async fn is_initialized(&self) -> DotfResult<bool> {
+        let settings_path = self.filesystem.dotf_settings_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         Ok(self.filesystem.exists(&settings_path).await?
             && self.filesystem.exists(&repo_path).await?)
     }
 
-    async fn load_settings(&self) -> DottResult<Settings> {
-        let settings_path = self.filesystem.dott_settings_path();
+    async fn load_settings(&self) -> DotfResult<Settings> {
+        let settings_path = self.filesystem.dotf_settings_path();
 
         if !self.filesystem.exists(&settings_path).await? {
-            return Err(DottError::NotInitialized);
+            return Err(DotfError::NotInitialized);
         }
 
         let content = self.filesystem.read_to_string(&settings_path).await?;
         let settings: Settings = Settings::from_toml(&content)
-            .map_err(|e| DottError::Config(format!("Failed to parse settings: {}", e)))?;
+            .map_err(|e| DotfError::Config(format!("Failed to parse settings: {}", e)))?;
 
         Ok(settings)
     }
 
-    async fn load_config(&self) -> DottResult<DottConfig> {
-        let config_path = format!("{}/dott.toml", self.filesystem.dott_repo_path());
+    async fn load_config(&self) -> DotfResult<DotfConfig> {
+        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
 
         if !self.filesystem.exists(&config_path).await? {
-            return Err(DottError::Config(
-                "dott.toml not found in repository".to_string(),
+            return Err(DotfError::Config(
+                "dotf.toml not found in repository".to_string(),
             ));
         }
 
         let content = self.filesystem.read_to_string(&config_path).await?;
-        let config: DottConfig = toml::from_str(&content)
-            .map_err(|e| DottError::Config(format!("Failed to parse dott.toml: {}", e)))?;
+        let config: DotfConfig = toml::from_str(&content)
+            .map_err(|e| DotfError::Config(format!("Failed to parse dotf.toml: {}", e)))?;
 
         Ok(config)
     }
@@ -355,15 +355,15 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     async fn create_symlink_operations(
         &self,
         symlinks: &HashMap<String, String>,
-    ) -> DottResult<Vec<SymlinkOperation>> {
+    ) -> DotfResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
 
         for (target, source) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
                 let home = dirs::home_dir().ok_or_else(|| {
-                    DottError::Operation("Could not determine home directory".to_string())
+                    DotfError::Operation("Could not determine home directory".to_string())
                 })?;
                 target.replacen("~", &home.to_string_lossy(), 1)
             } else {

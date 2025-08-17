@@ -330,7 +330,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dott"
+name = "dotf"
 version = "0.1.0"
 dependencies = [
  "assert_matches",

@@ -31,7 +31,7 @@ impl UiComponents {
             self.theme
                 .primary("╔══════════════════════════════════════╗"),
             self.theme
-                .primary(&format!("║  {}  {} {} ║", Icons::ROCKET, "Dott", version)),
+                .primary(&format!("║  {}  {} {} ║", Icons::ROCKET, "Dotf", version)),
             self.theme
                 .primary("║      Modern Dotfile Management      ║"),
             self.theme

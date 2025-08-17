@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::error::DottResult;
+use crate::error::DotfResult;
 use crate::traits::filesystem::FileSystem;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,7 +70,7 @@ impl<F: FileSystem> BackupManager<F> {
         Self { filesystem }
     }
 
-    pub async fn backup_file(&self, file_path: &str) -> DottResult<BackupEntry> {
+    pub async fn backup_file(&self, file_path: &str) -> DotfResult<BackupEntry> {
         let timestamp = Utc::now();
         let backup_filename = format!(
             "{}_{}",
@@ -81,11 +81,11 @@ impl<F: FileSystem> BackupManager<F> {
             timestamp.format("%Y%m%d_%H%M%S")
         );
 
-        let backup_path = format!("{}/{}", self.filesystem.dott_backup_path(), backup_filename);
+        let backup_path = format!("{}/{}", self.filesystem.dotf_backup_path(), backup_filename);
 
         // Ensure backup directory exists
         self.filesystem
-            .create_dir_all(&self.filesystem.dott_backup_path())
+            .create_dir_all(&self.filesystem.dotf_backup_path())
             .await?;
 
         let file_type = if self.filesystem.is_symlink(file_path).await? {
@@ -110,7 +110,7 @@ impl<F: FileSystem> BackupManager<F> {
         Ok(entry)
     }
 
-    pub async fn restore_from_backup(&self, backup_entry: &BackupEntry) -> DottResult<()> {
+    pub async fn restore_from_backup(&self, backup_entry: &BackupEntry) -> DotfResult<()> {
         match &backup_entry.file_type {
             BackupFileType::File => {
                 self.filesystem
@@ -131,13 +131,13 @@ impl<F: FileSystem> BackupManager<F> {
         Ok(())
     }
 
-    pub async fn load_manifest(&self) -> DottResult<BackupManifest> {
-        let manifest_path = format!("{}/manifest.json", self.filesystem.dott_backup_path());
+    pub async fn load_manifest(&self) -> DotfResult<BackupManifest> {
+        let manifest_path = format!("{}/manifest.json", self.filesystem.dotf_backup_path());
 
         if self.filesystem.exists(&manifest_path).await? {
             let content = self.filesystem.read_to_string(&manifest_path).await?;
             let manifest: BackupManifest = serde_json::from_str(&content).map_err(|e| {
-                crate::error::DottError::Config(format!("Failed to parse backup manifest: {}", e))
+                crate::error::DotfError::Config(format!("Failed to parse backup manifest: {}", e))
             })?;
             Ok(manifest)
         } else {
@@ -145,35 +145,35 @@ impl<F: FileSystem> BackupManager<F> {
         }
     }
 
-    pub async fn save_manifest(&self, manifest: &BackupManifest) -> DottResult<()> {
-        let manifest_path = format!("{}/manifest.json", self.filesystem.dott_backup_path());
+    pub async fn save_manifest(&self, manifest: &BackupManifest) -> DotfResult<()> {
+        let manifest_path = format!("{}/manifest.json", self.filesystem.dotf_backup_path());
 
         // Ensure backup directory exists
         self.filesystem
-            .create_dir_all(&self.filesystem.dott_backup_path())
+            .create_dir_all(&self.filesystem.dotf_backup_path())
             .await?;
 
         let content = serde_json::to_string_pretty(manifest).map_err(|e| {
-            crate::error::DottError::Config(format!("Failed to serialize backup manifest: {}", e))
+            crate::error::DotfError::Config(format!("Failed to serialize backup manifest: {}", e))
         })?;
 
         self.filesystem.write(&manifest_path, &content).await?;
         Ok(())
     }
 
-    pub async fn add_backup_entry(&self, entry: BackupEntry) -> DottResult<()> {
+    pub async fn add_backup_entry(&self, entry: BackupEntry) -> DotfResult<()> {
         let mut manifest = self.load_manifest().await?;
         manifest.entries.insert(entry.original_path.clone(), entry);
         self.save_manifest(&manifest).await?;
         Ok(())
     }
 
-    pub async fn get_backup_entry(&self, original_path: &str) -> DottResult<Option<BackupEntry>> {
+    pub async fn get_backup_entry(&self, original_path: &str) -> DotfResult<Option<BackupEntry>> {
         let manifest = self.load_manifest().await?;
         Ok(manifest.entries.get(original_path).cloned())
     }
 
-    pub async fn remove_backup_entry(&self, original_path: &str) -> DottResult<()> {
+    pub async fn remove_backup_entry(&self, original_path: &str) -> DotfResult<()> {
         let mut manifest = self.load_manifest().await?;
         if let Some(entry) = manifest.entries.remove(original_path) {
             // Remove the backup file
@@ -183,7 +183,7 @@ impl<F: FileSystem> BackupManager<F> {
         Ok(())
     }
 
-    pub async fn cleanup_old_backups(&self, days: u64) -> DottResult<()> {
+    pub async fn cleanup_old_backups(&self, days: u64) -> DotfResult<()> {
         let mut manifest = self.load_manifest().await?;
         let cutoff = Utc::now() - chrono::Duration::days(days as i64);
 
@@ -204,7 +204,7 @@ impl<F: FileSystem> BackupManager<F> {
         Ok(())
     }
 
-    pub async fn restore_specific_backup(&self, original_path: &str) -> DottResult<()> {
+    pub async fn restore_specific_backup(&self, original_path: &str) -> DotfResult<()> {
         let entry = self.get_backup_entry(original_path).await?;
 
         match entry {
@@ -222,14 +222,14 @@ impl<F: FileSystem> BackupManager<F> {
 
                 Ok(())
             }
-            None => Err(crate::error::DottError::Operation(format!(
+            None => Err(crate::error::DotfError::Operation(format!(
                 "No backup found for: {}",
                 original_path
             ))),
         }
     }
 
-    pub async fn restore_all_backups(&self) -> DottResult<RestoreResult> {
+    pub async fn restore_all_backups(&self) -> DotfResult<RestoreResult> {
         let manifest = self.load_manifest().await?;
 
         if manifest.entries.is_empty() {
@@ -278,7 +278,7 @@ impl<F: FileSystem> BackupManager<F> {
         &self,
         original_path: &str,
         entry: &BackupEntry,
-    ) -> DottResult<()> {
+    ) -> DotfResult<()> {
         // Remove current file/symlink if it exists
         if self.filesystem.exists(original_path).await? {
             self.filesystem.remove_file(original_path).await?;
@@ -290,7 +290,7 @@ impl<F: FileSystem> BackupManager<F> {
         Ok(())
     }
 
-    pub async fn list_backups(&self) -> DottResult<Vec<BackupInfo>> {
+    pub async fn list_backups(&self) -> DotfResult<Vec<BackupInfo>> {
         let manifest = self.load_manifest().await?;
 
         let mut backups: Vec<BackupInfo> = manifest
@@ -385,7 +385,7 @@ mod tests {
 
         let entry = BackupEntry {
             original_path: "/home/user/.vimrc".to_string(),
-            backup_path: "/home/user/.dott/backups/.vimrc_20240101_120000".to_string(),
+            backup_path: "/home/user/.dotf/backups/.vimrc_20240101_120000".to_string(),
             created_at: Utc::now(),
             file_type: BackupFileType::File,
         };

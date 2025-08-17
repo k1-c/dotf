@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::backup::{BackupEntry, BackupManager};
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
         &self,
         source_path: &str,
         target_path: &str,
-    ) -> DottResult<Option<ConflictInfo>> {
+    ) -> DotfResult<Option<ConflictInfo>> {
         if !self.filesystem.exists(target_path).await? {
             return Ok(None);
         }
@@ -77,10 +77,10 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
         &self,
         conflict: &ConflictInfo,
         resolution: ConflictResolution,
-    ) -> DottResult<Option<BackupEntry>> {
+    ) -> DotfResult<Option<BackupEntry>> {
         match resolution {
             ConflictResolution::Skip => Ok(None),
-            ConflictResolution::Abort => Err(DottError::Operation(
+            ConflictResolution::Abort => Err(DotfError::Operation(
                 "Operation aborted by user".to_string(),
             )),
             ConflictResolution::Overwrite => {
@@ -104,7 +104,7 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
     pub async fn resolve_conflict_interactive(
         &self,
         conflict: &ConflictInfo,
-    ) -> DottResult<Option<BackupEntry>> {
+    ) -> DotfResult<Option<BackupEntry>> {
         let existing_type = if conflict.existing_is_symlink {
             format!(
                 "symlink -> {}",
@@ -153,7 +153,7 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
     pub async fn resolve_all_conflicts_interactive(
         &self,
         conflicts: &[ConflictInfo],
-    ) -> DottResult<Vec<BackupEntry>> {
+    ) -> DotfResult<Vec<BackupEntry>> {
         if conflicts.is_empty() {
             return Ok(Vec::new());
         }
@@ -217,14 +217,14 @@ impl<F: FileSystem + Clone, P: Prompt> ConflictResolver<F, P> {
             }
             _ => {
                 // Abort or invalid choice
-                Err(DottError::Operation(
+                Err(DotfError::Operation(
                     "Operation aborted by user".to_string(),
                 ))
             }
         }
     }
 
-    async fn remove_existing(&self, path: &str) -> DottResult<()> {
+    async fn remove_existing(&self, path: &str) -> DotfResult<()> {
         // Remove existing file or symlink
         self.filesystem.remove_file(path).await?;
         Ok(())
@@ -408,6 +408,6 @@ mod tests {
             .resolve_conflict(&conflict, ConflictResolution::Abort)
             .await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DottError::Operation(_)));
+        assert!(matches!(result.unwrap_err(), DotfError::Operation(_)));
     }
 }

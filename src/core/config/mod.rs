@@ -1,6 +1,6 @@
-pub mod dott_config;
+pub mod dotf_config;
 pub mod settings;
 pub mod validation;
 
-pub use dott_config::DottConfig;
+pub use dotf_config::DotfConfig;
 pub use settings::{Repository, Settings};

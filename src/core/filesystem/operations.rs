@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
-use crate::error::{DottError, DottResult};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::filesystem::FileSystem;
 
 #[derive(Clone)]
@@ -23,16 +23,16 @@ impl RealFileSystem {
 
 #[async_trait]
 impl FileSystem for RealFileSystem {
-    async fn exists(&self, path: &str) -> DottResult<bool> {
+    async fn exists(&self, path: &str) -> DotfResult<bool> {
         Ok(fs::metadata(path).await.is_ok())
     }
 
-    async fn create_dir_all(&self, path: &str) -> DottResult<()> {
-        fs::create_dir_all(path).await.map_err(DottError::Io)?;
+    async fn create_dir_all(&self, path: &str) -> DotfResult<()> {
+        fs::create_dir_all(path).await.map_err(DotfError::Io)?;
         Ok(())
     }
 
-    async fn create_symlink(&self, source: &str, target: &str) -> DottResult<()> {
+    async fn create_symlink(&self, source: &str, target: &str) -> DotfResult<()> {
         // Ensure parent directory exists
         if let Some(parent) = std::path::Path::new(target).parent() {
             if !self.exists(&parent.to_string_lossy()).await? {
@@ -44,46 +44,46 @@ impl FileSystem for RealFileSystem {
         {
             tokio::fs::symlink(source, target)
                 .await
-                .map_err(DottError::Io)?;
+                .map_err(DotfError::Io)?;
         }
 
         #[cfg(windows)]
         {
             // On Windows, we need to check if source is a directory or file
-            let source_metadata = fs::metadata(source).await.map_err(|e| DottError::Io(e))?;
+            let source_metadata = fs::metadata(source).await.map_err(|e| DotfError::Io(e))?;
 
             if source_metadata.is_dir() {
                 tokio::fs::symlink_dir(source, target)
                     .await
-                    .map_err(|e| DottError::Io(e))?;
+                    .map_err(|e| DotfError::Io(e))?;
             } else {
                 tokio::fs::symlink_file(source, target)
                     .await
-                    .map_err(|e| DottError::Io(e))?;
+                    .map_err(|e| DotfError::Io(e))?;
             }
         }
 
         Ok(())
     }
 
-    async fn remove_file(&self, path: &str) -> DottResult<()> {
-        let metadata = fs::symlink_metadata(path).await.map_err(DottError::Io)?;
+    async fn remove_file(&self, path: &str) -> DotfResult<()> {
+        let metadata = fs::symlink_metadata(path).await.map_err(DotfError::Io)?;
 
         if metadata.is_dir() {
-            fs::remove_dir_all(path).await.map_err(DottError::Io)?;
+            fs::remove_dir_all(path).await.map_err(DotfError::Io)?;
         } else {
-            fs::remove_file(path).await.map_err(DottError::Io)?;
+            fs::remove_file(path).await.map_err(DotfError::Io)?;
         }
 
         Ok(())
     }
 
-    async fn remove_dir(&self, path: &str) -> DottResult<()> {
-        fs::remove_dir_all(path).await.map_err(DottError::Io)?;
+    async fn remove_dir(&self, path: &str) -> DotfResult<()> {
+        fs::remove_dir_all(path).await.map_err(DotfError::Io)?;
         Ok(())
     }
 
-    async fn copy_file(&self, source: &str, target: &str) -> DottResult<()> {
+    async fn copy_file(&self, source: &str, target: &str) -> DotfResult<()> {
         // Ensure parent directory exists
         if let Some(parent) = std::path::Path::new(target).parent() {
             if !self.exists(&parent.to_string_lossy()).await? {
@@ -91,15 +91,15 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        fs::copy(source, target).await.map_err(DottError::Io)?;
+        fs::copy(source, target).await.map_err(DotfError::Io)?;
         Ok(())
     }
 
-    async fn read_to_string(&self, path: &str) -> DottResult<String> {
-        fs::read_to_string(path).await.map_err(DottError::Io)
+    async fn read_to_string(&self, path: &str) -> DotfResult<String> {
+        fs::read_to_string(path).await.map_err(DotfError::Io)
     }
 
-    async fn write(&self, path: &str, content: &str) -> DottResult<()> {
+    async fn write(&self, path: &str, content: &str) -> DotfResult<()> {
         // Ensure parent directory exists
         if let Some(parent) = std::path::Path::new(path).parent() {
             if !self.exists(&parent.to_string_lossy()).await? {
@@ -107,25 +107,25 @@ impl FileSystem for RealFileSystem {
             }
         }
 
-        let mut file = fs::File::create(path).await.map_err(DottError::Io)?;
+        let mut file = fs::File::create(path).await.map_err(DotfError::Io)?;
 
         file.write_all(content.as_bytes())
             .await
-            .map_err(DottError::Io)?;
+            .map_err(DotfError::Io)?;
 
-        file.flush().await.map_err(DottError::Io)?;
+        file.flush().await.map_err(DotfError::Io)?;
 
         Ok(())
     }
 
-    async fn is_symlink(&self, path: &str) -> DottResult<bool> {
-        let metadata = fs::symlink_metadata(path).await.map_err(DottError::Io)?;
+    async fn is_symlink(&self, path: &str) -> DotfResult<bool> {
+        let metadata = fs::symlink_metadata(path).await.map_err(DotfError::Io)?;
 
         Ok(metadata.file_type().is_symlink())
     }
 
-    async fn read_link(&self, path: &str) -> DottResult<PathBuf> {
-        fs::read_link(path).await.map_err(DottError::Io)
+    async fn read_link(&self, path: &str) -> DotfResult<PathBuf> {
+        fs::read_link(path).await.map_err(DotfError::Io)
     }
 }
 

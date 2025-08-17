@@ -88,11 +88,11 @@ impl InterruptionHandler {
         println!("{}", self.formatter.info("To initialize later, run:"));
         println!(
             "  {}",
-            self.theme.command("dott init --repo <your-repository-url>")
+            self.theme.command("dotf init --repo <your-repository-url>")
         );
 
         println!();
-        println!("{}", self.theme.muted("Thank you for using Dott! 👋"));
+        println!("{}", self.theme.muted("Thank you for using Dotf! 👋"));
     }
 
     /// Display sync cancellation message

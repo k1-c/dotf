@@ -1,8 +1,8 @@
 //! Enhanced init service with progress callbacks for animations
 
 use crate::cli::ui::InstallStage;
-use crate::core::config::{DottConfig, Repository as RepositoryConfig, Settings};
-use crate::error::{DottError, DottResult};
+use crate::core::config::{DotfConfig, Repository as RepositoryConfig, Settings};
+use crate::error::{DotfError, DotfResult};
 use crate::traits::{filesystem::FileSystem, prompt::Prompt, repository::Repository};
 
 /// Progress callback function type
@@ -27,7 +27,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         &self,
         repo_url: Option<String>,
         progress_callback: C,
-    ) -> DottResult<String>
+    ) -> DotfResult<String>
     where
         C: Fn(&InstallStage) + Send + Sync,
     {
@@ -51,7 +51,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
 
         // Validate the repository URL
         self.repository.validate_remote(&url).await.map_err(|e| {
-            DottError::Repository(format!("Invalid repository URL '{}': {}", url, e))
+            DotfError::Repository(format!("Invalid repository URL '{}': {}", url, e))
         })?;
 
         // Get default branch and prompt for branch selection
@@ -70,7 +70,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
             .branch_exists(&url, &selected_branch)
             .await?
         {
-            return Err(DottError::Repository(format!(
+            return Err(DotfError::Repository(format!(
                 "Branch '{}' does not exist in repository '{}'",
                 selected_branch, url
             )));
@@ -83,7 +83,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
             .fetch_config_from_branch(&url, &selected_branch)
             .await
             .map_err(|e| {
-                DottError::Config(format!(
+                DotfError::Config(format!(
                     "Failed to fetch configuration from '{}' branch '{}': {}",
                     url, selected_branch, e
                 ))
@@ -91,13 +91,13 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
 
         self.validate_config(&config)?;
 
-        // Setup local dott directory structure
+        // Setup local dotf directory structure
         progress_callback(&InstallStage::SettingUpDirectories);
-        self.setup_dott_directory().await?;
+        self.setup_dotf_directory().await?;
 
         // Clone the repository
         progress_callback(&InstallStage::CloningRepository);
-        let repo_path = self.filesystem.dott_repo_path();
+        let repo_path = self.filesystem.dotf_repo_path();
         self.repository
             .clone_branch(&url, &selected_branch, &repo_path)
             .await?;
@@ -121,7 +121,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         Ok(url)
     }
 
-    async fn prompt_for_branch(&self, default_branch: &str) -> DottResult<String> {
+    async fn prompt_for_branch(&self, default_branch: &str) -> DotfResult<String> {
         #[allow(clippy::never_loop)]
         loop {
             let prompt_text = format!("Enter the branch to use (default: {}): ", default_branch);
@@ -137,7 +137,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
                     // Check if this is an interruption (Ctrl+C)
                     let error_msg = e.to_string();
                     if error_msg.contains("read interrupted") || error_msg.contains("Interrupted") {
-                        return Err(DottError::UserCancellation);
+                        return Err(DotfError::UserCancellation);
                     }
                     // Re-throw other errors
                     return Err(e);
@@ -147,7 +147,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
     }
 
     // Include all the original methods from InitService
-    async fn prompt_for_repository_url(&self) -> DottResult<String> {
+    async fn prompt_for_repository_url(&self) -> DotfResult<String> {
         loop {
             match self
                 .prompt
@@ -170,7 +170,7 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
                     // Check if this is an interruption (Ctrl+C)
                     let error_msg = e.to_string();
                     if error_msg.contains("read interrupted") || error_msg.contains("Interrupted") {
-                        return Err(DottError::UserCancellation);
+                        return Err(DotfError::UserCancellation);
                     }
                     // Re-throw other errors
                     return Err(e);
@@ -179,11 +179,11 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         }
     }
 
-    fn validate_config(&self, config: &DottConfig) -> DottResult<()> {
+    fn validate_config(&self, config: &DotfConfig) -> DotfResult<()> {
         // Validate symlinks are not empty paths
         for (target, source) in &config.symlinks {
             if target.trim().is_empty() || source.trim().is_empty() {
-                return Err(DottError::Config(format!(
+                return Err(DotfError::Config(format!(
                     "Invalid symlink configuration: '{}' -> '{}'",
                     source, target
                 )));
@@ -193,40 +193,40 @@ impl<R: Repository, F: FileSystem, P: Prompt> EnhancedInitService<R, F, P> {
         Ok(())
     }
 
-    async fn setup_dott_directory(&self) -> DottResult<()> {
-        let dott_dir = self.filesystem.dott_directory();
+    async fn setup_dotf_directory(&self) -> DotfResult<()> {
+        let dotf_dir = self.filesystem.dotf_directory();
 
-        // Check if .dott directory already exists
-        if self.filesystem.exists(&dott_dir).await? {
+        // Check if .dotf directory already exists
+        if self.filesystem.exists(&dotf_dir).await? {
             let should_overwrite = self.prompt.confirm(
-                &format!("Dott directory already exists at: {}. Do you want to remove it and start fresh?", dott_dir)
+                &format!("Dotf directory already exists at: {}. Do you want to remove it and start fresh?", dotf_dir)
             ).await?;
 
             if !should_overwrite {
-                return Err(DottError::Operation(
+                return Err(DotfError::Operation(
                     "Initialization cancelled by user".to_string(),
                 ));
             }
 
             // Remove existing directory
-            self.filesystem.remove_dir(&dott_dir).await?;
+            self.filesystem.remove_dir(&dotf_dir).await?;
         }
 
-        // Create main dott directory
-        self.filesystem.create_dott_directory().await?;
+        // Create main dotf directory
+        self.filesystem.create_dotf_directory().await?;
 
         // Create subdirectories
-        let backup_path = self.filesystem.dott_backup_path();
+        let backup_path = self.filesystem.dotf_backup_path();
         self.filesystem.create_dir_all(&backup_path).await?;
 
         Ok(())
     }
 
-    async fn save_settings(&self, settings: &Settings) -> DottResult<()> {
-        let settings_path = self.filesystem.dott_settings_path();
+    async fn save_settings(&self, settings: &Settings) -> DotfResult<()> {
+        let settings_path = self.filesystem.dotf_settings_path();
         let content = settings
             .to_toml()
-            .map_err(|e| DottError::Config(format!("Failed to serialize settings: {}", e)))?;
+            .map_err(|e| DotfError::Config(format!("Failed to serialize settings: {}", e)))?;
 
         self.filesystem.write(&settings_path, &content).await?;
         Ok(())

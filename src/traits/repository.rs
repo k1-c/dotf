@@ -1,20 +1,20 @@
-use crate::core::config::DottConfig;
-use crate::error::DottResult;
+use crate::core::config::DotfConfig;
+use crate::error::DotfResult;
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait Repository {
-    async fn validate_remote(&self, url: &str) -> DottResult<()>;
-    async fn fetch_config(&self, url: &str) -> DottResult<DottConfig>;
-    async fn fetch_config_from_branch(&self, url: &str, branch: &str) -> DottResult<DottConfig>;
-    async fn clone(&self, url: &str, destination: &str) -> DottResult<()>;
-    async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DottResult<()>;
-    async fn pull(&self, repo_path: &str) -> DottResult<()>;
-    async fn get_status(&self, repo_path: &str) -> DottResult<RepositoryStatus>;
-    async fn get_remote_url(&self, repo_path: &str) -> DottResult<String>;
-    async fn is_file_modified(&self, repo_path: &str, file_path: &str) -> DottResult<bool>;
-    async fn get_default_branch(&self, url: &str) -> DottResult<String>;
-    async fn branch_exists(&self, url: &str, branch: &str) -> DottResult<bool>;
+    async fn validate_remote(&self, url: &str) -> DotfResult<()>;
+    async fn fetch_config(&self, url: &str) -> DotfResult<DotfConfig>;
+    async fn fetch_config_from_branch(&self, url: &str, branch: &str) -> DotfResult<DotfConfig>;
+    async fn clone(&self, url: &str, destination: &str) -> DotfResult<()>;
+    async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DotfResult<()>;
+    async fn pull(&self, repo_path: &str) -> DotfResult<()>;
+    async fn get_status(&self, repo_path: &str) -> DotfResult<RepositoryStatus>;
+    async fn get_remote_url(&self, repo_path: &str) -> DotfResult<String>;
+    async fn is_file_modified(&self, repo_path: &str, file_path: &str) -> DotfResult<bool>;
+    async fn get_default_branch(&self, url: &str) -> DotfResult<String>;
+    async fn branch_exists(&self, url: &str, branch: &str) -> DotfResult<bool>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -36,7 +36,7 @@ pub mod tests {
         pub clone_calls: Arc<Mutex<Vec<(String, String)>>>,
         pub pull_calls: Arc<Mutex<Vec<String>>>,
         pub should_fail_validate: Arc<Mutex<bool>>,
-        pub config_response: Arc<Mutex<Option<DottConfig>>>,
+        pub config_response: Arc<Mutex<Option<DotfConfig>>>,
         pub status_response: Arc<Mutex<Option<RepositoryStatus>>>,
         pub remote_url_response: Arc<Mutex<Option<String>>>,
         pub default_branch_response: Arc<Mutex<Option<String>>>,
@@ -68,7 +68,7 @@ pub mod tests {
             *self.should_fail_validate.lock().unwrap() = should_fail;
         }
 
-        pub fn set_config_response(&mut self, config: DottConfig) {
+        pub fn set_config_response(&mut self, config: DotfConfig) {
             *self.config_response.lock().unwrap() = Some(config);
         }
 
@@ -103,11 +103,11 @@ pub mod tests {
 
     #[async_trait]
     impl Repository for MockRepository {
-        async fn validate_remote(&self, url: &str) -> DottResult<()> {
+        async fn validate_remote(&self, url: &str) -> DotfResult<()> {
             self.validate_calls.lock().unwrap().push(url.to_string());
 
             if *self.should_fail_validate.lock().unwrap() {
-                return Err(crate::error::DottError::Repository(
+                return Err(crate::error::DotfError::Repository(
                     "Mock validation failure".to_string(),
                 ));
             }
@@ -115,9 +115,9 @@ pub mod tests {
             Ok(())
         }
 
-        async fn fetch_config(&self, _url: &str) -> DottResult<DottConfig> {
+        async fn fetch_config(&self, _url: &str) -> DotfResult<DotfConfig> {
             self.config_response.lock().unwrap().clone().ok_or_else(|| {
-                crate::error::DottError::Config("No config response set".to_string())
+                crate::error::DotfError::Config("No config response set".to_string())
             })
         }
 
@@ -125,13 +125,13 @@ pub mod tests {
             &self,
             _url: &str,
             _branch: &str,
-        ) -> DottResult<DottConfig> {
+        ) -> DotfResult<DotfConfig> {
             self.config_response.lock().unwrap().clone().ok_or_else(|| {
-                crate::error::DottError::Config("No config response set".to_string())
+                crate::error::DotfError::Config("No config response set".to_string())
             })
         }
 
-        async fn clone(&self, url: &str, destination: &str) -> DottResult<()> {
+        async fn clone(&self, url: &str, destination: &str) -> DotfResult<()> {
             self.clone_calls
                 .lock()
                 .unwrap()
@@ -139,7 +139,7 @@ pub mod tests {
             Ok(())
         }
 
-        async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DottResult<()> {
+        async fn clone_branch(&self, url: &str, branch: &str, destination: &str) -> DotfResult<()> {
             self.clone_calls
                 .lock()
                 .unwrap()
@@ -147,45 +147,45 @@ pub mod tests {
             Ok(())
         }
 
-        async fn pull(&self, repo_path: &str) -> DottResult<()> {
+        async fn pull(&self, repo_path: &str) -> DotfResult<()> {
             self.pull_calls.lock().unwrap().push(repo_path.to_string());
             Ok(())
         }
 
-        async fn get_status(&self, _repo_path: &str) -> DottResult<RepositoryStatus> {
+        async fn get_status(&self, _repo_path: &str) -> DotfResult<RepositoryStatus> {
             self.status_response.lock().unwrap().clone().ok_or_else(|| {
-                crate::error::DottError::Repository("No status response set".to_string())
+                crate::error::DotfError::Repository("No status response set".to_string())
             })
         }
 
-        async fn get_remote_url(&self, _repo_path: &str) -> DottResult<String> {
+        async fn get_remote_url(&self, _repo_path: &str) -> DotfResult<String> {
             self.remote_url_response
                 .lock()
                 .unwrap()
                 .clone()
                 .ok_or_else(|| {
-                    crate::error::DottError::Repository("No remote URL response set".to_string())
+                    crate::error::DotfError::Repository("No remote URL response set".to_string())
                 })
         }
 
-        async fn is_file_modified(&self, _repo_path: &str, _file_path: &str) -> DottResult<bool> {
+        async fn is_file_modified(&self, _repo_path: &str, _file_path: &str) -> DotfResult<bool> {
             // Default to false for mock
             Ok(false)
         }
 
-        async fn get_default_branch(&self, _url: &str) -> DottResult<String> {
+        async fn get_default_branch(&self, _url: &str) -> DotfResult<String> {
             self.default_branch_response
                 .lock()
                 .unwrap()
                 .clone()
                 .ok_or_else(|| {
-                    crate::error::DottError::Repository(
+                    crate::error::DotfError::Repository(
                         "No default branch response set".to_string(),
                     )
                 })
         }
 
-        async fn branch_exists(&self, _url: &str, _branch: &str) -> DottResult<bool> {
+        async fn branch_exists(&self, _url: &str, _branch: &str) -> DotfResult<bool> {
             Ok(*self.branch_exists_response.lock().unwrap())
         }
     }
