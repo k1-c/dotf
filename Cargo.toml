@@ -1,6 +1,6 @@
 [package]
 name = "dotf"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["k1-c"]
 description = "A modern dotfile management tool"
