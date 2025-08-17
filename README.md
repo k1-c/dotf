@@ -14,7 +14,7 @@ _Sync your environment / configurations across machines in seconds_
 [![GitHub release](https://img.shields.io/github/release/k1-c/dotf.svg?style=for-the-badge)](https://github.com/k1-c/dotf/releases)
 
 ```bash
-curl -sSL dotf-install.sh | sh
+cargo install dotf
 ```
 
 _One command to rule them all_ ⚡
