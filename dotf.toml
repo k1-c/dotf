@@ -1,0 +1,17 @@
+[symlinks]
+# {Source path} = {Target path}
+# Example:
+# "zsh/.zshrc" = "~/.zshrc"
+# "git/.gitconfig" = "~/.gitconfig"
+# "nvim" = "~/.config/nvim"
+
+[scripts.deps]
+# Platform-specific dependency installation scripts
+# Example:
+# macos = "scripts/install-deps-macos.sh"
+# linux = "scripts/install-deps-linux.sh"
+
+[scripts.custom]
+# Custom installation scripts
+# setup-vim = "scripts/setup-vim-plugins.sh"
+# install-fonts = "scripts/install-fonts.sh"
