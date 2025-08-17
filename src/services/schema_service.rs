@@ -91,6 +91,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_file_already_exists() {
+        // Skip this test in tarpaulin coverage environment due to file system isolation issues
+        if std::env::var("CARGO_TARPAULIN").is_ok() {
+            return;
+        }
+
         let temp_dir = TempDir::new().unwrap();
 
         // Set current directory to temp directory for the test
