@@ -1,9 +1,9 @@
 [package]
 name = "dotf"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["k1-c"]
-description = "A modern dotfile management tool"
+description = "A modern dotfile manager"
 repository = "https://github.com/k1-c/dotf"
 license = "MIT"
 keywords = ["dotfiles", "configuration", "management", "cli"]
