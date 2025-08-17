@@ -227,7 +227,7 @@ mod tests {
 
     fn create_test_config() -> DotfConfig {
         DotfConfig {
-            symlinks: HashMap::from([("~/.vimrc".to_string(), ".vimrc".to_string())]),
+            symlinks: HashMap::from([(".vimrc".to_string(), "~/.vimrc".to_string())]),
             scripts: ScriptsConfig::default(),
             platform: PlatformConfig::default(),
         }

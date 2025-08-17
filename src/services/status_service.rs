@@ -359,7 +359,7 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         let mut operations = Vec::new();
         let repo_path = self.filesystem.dotf_repo_path();
 
-        for (target, source) in symlinks {
+        for (source, target) in symlinks {
             // Expand target path (handle ~)
             let expanded_target = if target.starts_with("~/") {
                 let home = dirs::home_dir().ok_or_else(|| {
