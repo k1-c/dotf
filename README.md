@@ -9,6 +9,7 @@ _Sync your environment / configurations across machines in seconds_
 > 🚀 **Alpha Version** - Core functionality implemented. Ready for testing and feedback. Some advanced features may still be in development.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/k1-c/dotf/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/k1-c/dotf/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/k1-c/dotf/graph/badge.svg?token=OBDREHA96U)](https://codecov.io/github/k1-c/dotf)
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Crates.io](https://img.shields.io/crates/v/dotf.svg?style=for-the-badge)](https://crates.io/crates/dotf)
