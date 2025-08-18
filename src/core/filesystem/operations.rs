@@ -4,7 +4,7 @@ use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
 use crate::error::{DotfError, DotfResult};
-use crate::traits::filesystem::FileSystem;
+use crate::traits::filesystem::{FileEntry, FileSystem};
 
 #[derive(Clone)]
 pub struct RealFileSystem;
@@ -126,6 +126,32 @@ impl FileSystem for RealFileSystem {
 
     async fn read_link(&self, path: &str) -> DotfResult<PathBuf> {
         fs::read_link(path).await.map_err(DotfError::Io)
+    }
+
+    async fn is_dir(&self, path: &str) -> DotfResult<bool> {
+        let metadata = fs::metadata(path).await.map_err(DotfError::Io)?;
+        Ok(metadata.is_dir())
+    }
+
+    async fn list_entries(&self, path: &str) -> DotfResult<Vec<FileEntry>> {
+        let mut entries = Vec::new();
+        let mut dir = fs::read_dir(path).await.map_err(DotfError::Io)?;
+
+        while let Some(entry) = dir.next_entry().await.map_err(DotfError::Io)? {
+            let path = entry.path();
+            let path_str = path.to_string_lossy().to_string();
+            let metadata = entry.metadata().await.map_err(DotfError::Io)?;
+            let symlink_metadata = fs::symlink_metadata(&path).await.map_err(DotfError::Io)?;
+
+            entries.push(FileEntry {
+                path: path_str,
+                is_file: metadata.is_file(),
+                is_dir: metadata.is_dir(),
+                is_symlink: symlink_metadata.file_type().is_symlink(),
+            });
+        }
+
+        Ok(entries)
     }
 }
 

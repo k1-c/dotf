@@ -130,8 +130,22 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 
         // Display the list of created symlinks
         println!("\n📋 Symlinks created:");
+        let home_dir = dirs::home_dir().map(|d| d.to_string_lossy().to_string());
         for operation in &operations {
-            println!("  {} -> {}", operation.target_path, operation.source_path);
+            // Format paths similar to symlinks command display
+            let source_display = if let Some(ref home) = home_dir {
+                operation.source_path.replace(home, "~")
+            } else {
+                operation.source_path.clone()
+            };
+
+            let target_display = if let Some(ref home) = home_dir {
+                operation.target_path.replace(home, "~")
+            } else {
+                operation.target_path.clone()
+            };
+
+            println!("  {} → {}", source_display, target_display);
         }
         if !backup_entries.is_empty() {
             println!("\n=� Created {} backups", backup_entries.len());
@@ -360,10 +374,64 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
                 format!("{}/{}", repo_path, source)
             };
 
-            operations.push(SymlinkOperation {
-                source_path: absolute_source,
-                target_path: expanded_target,
-            });
+            // Check if source is a directory
+            if self.filesystem.exists(&absolute_source).await?
+                && self.filesystem.is_dir(&absolute_source).await?
+            {
+                // Recursively expand directory
+                let dir_operations = self
+                    .expand_directory_operations(&absolute_source, &expanded_target)
+                    .await?;
+                operations.extend(dir_operations);
+            } else {
+                // Single file or doesn't exist yet
+                operations.push(SymlinkOperation {
+                    source_path: absolute_source,
+                    target_path: expanded_target,
+                });
+            }
+        }
+
+        Ok(operations)
+    }
+
+    async fn expand_directory_operations(
+        &self,
+        source_dir: &str,
+        target_dir: &str,
+    ) -> DotfResult<Vec<SymlinkOperation>> {
+        let mut operations = Vec::new();
+        let mut dir_stack = vec![(source_dir.to_string(), target_dir.to_string())];
+
+        while let Some((current_source, current_target)) = dir_stack.pop() {
+            let entries = self.filesystem.list_entries(&current_source).await?;
+
+            for entry in entries {
+                // Calculate relative path from current_source
+                let relative_path = entry
+                    .path
+                    .strip_prefix(&current_source)
+                    .unwrap_or(&entry.path)
+                    .trim_start_matches('/');
+
+                let target_path = if relative_path.is_empty() {
+                    current_target.clone()
+                } else {
+                    format!("{}/{}", current_target, relative_path)
+                };
+
+                if entry.is_dir && !entry.is_symlink {
+                    // Add subdirectory to stack for processing
+                    let sub_target = format!("{}/{}", current_target, relative_path);
+                    dir_stack.push((entry.path.clone(), sub_target));
+                } else if entry.is_file || entry.is_symlink {
+                    // Add file or symlink to operations
+                    operations.push(SymlinkOperation {
+                        source_path: entry.path.clone(),
+                        target_path,
+                    });
+                }
+            }
         }
 
         Ok(operations)

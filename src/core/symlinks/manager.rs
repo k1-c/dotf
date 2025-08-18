@@ -80,11 +80,11 @@ impl<F: FileSystem + Clone, P: Prompt> SymlinkManager<F, P> {
 
         // Create all symlinks
         for operation in operations {
-            // Skip if there was a conflict that wasn't resolved
+            // Skip if there was a conflict that still exists (wasn't resolved)
             if conflicts
                 .iter()
                 .any(|c| c.target_path == operation.target_path)
-                && !self.filesystem.exists(&operation.target_path).await?
+                && self.filesystem.exists(&operation.target_path).await?
             {
                 continue;
             }

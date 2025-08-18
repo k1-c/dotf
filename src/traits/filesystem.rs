@@ -2,6 +2,14 @@ use crate::error::DotfResult;
 use async_trait::async_trait;
 use std::path::PathBuf;
 
+#[derive(Debug, Clone)]
+pub struct FileEntry {
+    pub path: String,
+    pub is_file: bool,
+    pub is_dir: bool,
+    pub is_symlink: bool,
+}
+
 #[async_trait]
 pub trait FileSystem: Send + Sync {
     async fn exists(&self, path: &str) -> DotfResult<bool>;
@@ -14,6 +22,8 @@ pub trait FileSystem: Send + Sync {
     async fn write(&self, path: &str, content: &str) -> DotfResult<()>;
     async fn is_symlink(&self, path: &str) -> DotfResult<bool>;
     async fn read_link(&self, path: &str) -> DotfResult<PathBuf>;
+    async fn is_dir(&self, path: &str) -> DotfResult<bool>;
+    async fn list_entries(&self, path: &str) -> DotfResult<Vec<FileEntry>>;
 
     // Dotf specific path operations
     fn dotf_directory(&self) -> String {
@@ -212,6 +222,75 @@ pub mod tests {
                         "Symlink not found",
                     ))
                 })
+        }
+
+        async fn is_dir(&self, path: &str) -> DotfResult<bool> {
+            Ok(self.directories.lock().unwrap().iter().any(|p| p == path))
+        }
+
+        async fn list_entries(&self, path: &str) -> DotfResult<Vec<FileEntry>> {
+            let mut entries = Vec::new();
+            let path_prefix = if path.ends_with('/') {
+                path.to_string()
+            } else {
+                format!("{}/", path)
+            };
+
+            // List files
+            let files = self.files.lock().unwrap();
+            for file_path in files.keys() {
+                if file_path.starts_with(&path_prefix) {
+                    // Get relative path and check if it's a direct child
+                    let relative = &file_path[path_prefix.len()..];
+                    if !relative.contains('/') {
+                        entries.push(FileEntry {
+                            path: file_path.clone(),
+                            is_file: true,
+                            is_dir: false,
+                            is_symlink: false,
+                        });
+                    }
+                }
+            }
+
+            // List directories
+            let dirs = self.directories.lock().unwrap();
+            for dir_path in dirs.iter() {
+                if dir_path.starts_with(&path_prefix) && dir_path != path {
+                    let relative = &dir_path[path_prefix.len()..];
+                    if !relative.contains('/') || relative.ends_with('/') {
+                        entries.push(FileEntry {
+                            path: dir_path.clone(),
+                            is_file: false,
+                            is_dir: true,
+                            is_symlink: false,
+                        });
+                    }
+                }
+            }
+
+            // List symlinks
+            let symlinks = self.symlinks.lock().unwrap();
+            for link_path in symlinks.keys() {
+                if link_path.starts_with(&path_prefix) {
+                    let relative = &link_path[path_prefix.len()..];
+                    if !relative.contains('/') {
+                        // Check if already added as file/dir and update
+                        if let Some(entry) = entries.iter_mut().find(|e| e.path == *link_path) {
+                            entry.is_symlink = true;
+                        } else {
+                            entries.push(FileEntry {
+                                path: link_path.clone(),
+                                is_file: false,
+                                is_dir: false,
+                                is_symlink: true,
+                            });
+                        }
+                    }
+                }
+            }
+
+            Ok(entries)
         }
     }
 }
