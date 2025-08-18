@@ -13,7 +13,13 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
     }
 
     pub async fn show_repository_config(&self) -> DotfResult<String> {
-        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let config_path = format!("{}/dotf.toml", repo_path);
 
         if !self.filesystem.exists(&config_path).await? {
             return Err(DotfError::Config(
@@ -105,7 +111,13 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
     }
 
     pub async fn validate_config(&self) -> DotfResult<ConfigValidationResult> {
-        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let config_path = format!("{}/dotf.toml", repo_path);
 
         if !self.filesystem.exists(&config_path).await? {
             return Ok(ConfigValidationResult {
@@ -134,7 +146,12 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
         let mut warnings = Vec::new();
 
         // Validate symlinks
-        let repo_path = self.filesystem.dotf_repo_path();
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
 
         for (target, source) in &config.symlinks {
             let source_path = format!("{}/{}", repo_path, source);
@@ -238,6 +255,20 @@ impl<F: FileSystem, P: Prompt> ConfigService<F, P> {
             warnings: validation.warnings,
         })
     }
+
+    async fn load_settings(&self) -> DotfResult<Settings> {
+        let settings_path = self.filesystem.dotf_settings_path();
+
+        if !self.filesystem.exists(&settings_path).await? {
+            return Err(DotfError::NotInitialized);
+        }
+
+        let content = self.filesystem.read_to_string(&settings_path).await?;
+        let settings: Settings = Settings::from_toml(&content)
+            .map_err(|e| DotfError::Config(format!("Failed to parse settings: {}", e)))?;
+
+        Ok(settings)
+    }
 }
 
 #[derive(Debug)]
@@ -278,6 +309,20 @@ mod tests {
         (service, filesystem, prompt)
     }
 
+    fn create_test_settings_file(filesystem: &MockFileSystem) {
+        let settings = Settings {
+            repository: Repository {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
+            last_sync: None,
+            initialized_at: Utc::now(),
+        };
+        let settings_content = settings.to_toml().unwrap();
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+    }
+
     fn create_test_config() -> DotfConfig {
         let mut symlinks = HashMap::new();
         symlinks.insert(".vimrc".to_string(), "vim/vimrc".to_string());
@@ -303,6 +348,8 @@ mod tests {
     async fn test_show_repository_config_success() {
         let (service, filesystem, _) = create_test_service();
 
+        create_test_settings_file(&filesystem);
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
@@ -316,7 +363,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_show_repository_config_not_found() {
-        let (service, _, _) = create_test_service();
+        let (service, filesystem, _) = create_test_service();
+
+        create_test_settings_file(&filesystem);
 
         let result = service.show_repository_config().await;
         assert!(result.is_err());
@@ -348,6 +397,8 @@ mod tests {
     async fn test_validate_config_success() {
         let (service, filesystem, _) = create_test_service();
 
+        create_test_settings_file(&filesystem);
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
@@ -374,6 +425,8 @@ mod tests {
     async fn test_validate_config_with_warnings() {
         let (service, filesystem, _) = create_test_service();
 
+        create_test_settings_file(&filesystem);
+
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();
         let config_path = format!("{}/dotf.toml", filesystem.dotf_repo_path());
@@ -391,6 +444,8 @@ mod tests {
     #[tokio::test]
     async fn test_show_config_summary() {
         let (service, filesystem, _) = create_test_service();
+
+        create_test_settings_file(&filesystem);
 
         let config = create_test_config();
         let config_content = toml::to_string_pretty(&config).unwrap();

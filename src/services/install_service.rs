@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::core::{
-    config::DotfConfig,
+    config::{DotfConfig, Settings},
     symlinks::{BackupEntry, SymlinkManager, SymlinkOperation},
 };
 use crate::error::{DotfError, DotfResult};
@@ -51,7 +51,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         };
 
         if let Some(script) = script_path {
-            let full_script_path = format!("{}/{}", self.filesystem.dotf_repo_path(), script);
+            let settings = self.load_settings().await?;
+            let repo_path = settings
+                .repository
+                .local
+                .clone()
+                .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+            let full_script_path = format!("{}/{}", repo_path, script);
 
             if !self.filesystem.exists(&full_script_path).await? {
                 return Err(DotfError::ScriptExecution(format!(
@@ -141,7 +147,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
             DotfError::Config(format!("Custom script '{}' not found", script_name))
         })?;
 
-        let full_script_path = format!("{}/{}", self.filesystem.dotf_repo_path(), script_path);
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let full_script_path = format!("{}/{}", repo_path, script_path);
 
         if !self.filesystem.exists(&full_script_path).await? {
             return Err(DotfError::ScriptExecution(format!(
@@ -297,7 +309,13 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
     }
 
     async fn load_config(&self) -> DotfResult<DotfConfig> {
-        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let config_path = format!("{}/dotf.toml", repo_path);
 
         if !self.filesystem.exists(&config_path).await? {
             return Err(DotfError::Config(
@@ -317,7 +335,12 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         symlinks: &HashMap<String, String>,
     ) -> DotfResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
-        let repo_path = self.filesystem.dotf_repo_path();
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
 
         for (source, target) in symlinks {
             // Expand target path (handle ~)
@@ -383,6 +406,20 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
         Ok(result)
     }
 
+    async fn load_settings(&self) -> DotfResult<Settings> {
+        let settings_path = self.filesystem.dotf_settings_path();
+
+        if !self.filesystem.exists(&settings_path).await? {
+            return Err(DotfError::NotInitialized);
+        }
+
+        let content = self.filesystem.read_to_string(&settings_path).await?;
+        let settings: Settings = Settings::from_toml(&content)
+            .map_err(|e| DotfError::Config(format!("Failed to parse settings: {}", e)))?;
+
+        Ok(settings)
+    }
+
     fn detect_platform(&self) -> String {
         #[cfg(target_os = "macos")]
         return "macos".to_string();
@@ -402,12 +439,28 @@ impl<F: FileSystem + Clone, S: ScriptExecutor, P: Prompt> InstallService<F, S, P
 mod tests {
     use super::*;
     use crate::core::config::dotf_config::{DepsScripts, PlatformConfig, ScriptsConfig};
+    use crate::core::config::{settings::Repository, Settings};
     use crate::traits::{
         filesystem::tests::MockFileSystem,
         prompt::tests::MockPrompt,
         script_executor::{tests::MockScriptExecutor, ExecutionResult},
     };
+    use chrono::Utc;
     use std::collections::HashMap;
+
+    fn create_test_settings_file(filesystem: &MockFileSystem) {
+        let settings = Settings {
+            repository: Repository {
+                remote: "https://github.com/user/dotfiles".to_string(),
+                branch: None,
+                local: None,
+            },
+            last_sync: None,
+            initialized_at: Utc::now(),
+        };
+        let settings_content = settings.to_toml().unwrap();
+        filesystem.add_file(&filesystem.dotf_settings_path(), &settings_content);
+    }
 
     fn create_test_config() -> DotfConfig {
         let mut symlinks = HashMap::new();
@@ -435,6 +488,8 @@ mod tests {
         let filesystem = MockFileSystem::new();
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
+
+        create_test_settings_file(&filesystem);
 
         // Setup config file
         let config = create_test_config();
@@ -478,6 +533,8 @@ mod tests {
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
 
+        create_test_settings_file(&filesystem);
+
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
@@ -500,6 +557,8 @@ mod tests {
         let filesystem = MockFileSystem::new();
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
+
+        create_test_settings_file(&filesystem);
 
         // Setup config file
         let config = create_test_config();
@@ -541,6 +600,8 @@ mod tests {
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
 
+        create_test_settings_file(&filesystem);
+
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
@@ -568,6 +629,8 @@ mod tests {
         let filesystem = MockFileSystem::new();
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
+
+        create_test_settings_file(&filesystem);
 
         // Setup config file
         let config = create_test_config();
@@ -602,6 +665,8 @@ mod tests {
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
 
+        create_test_settings_file(&filesystem);
+
         // Setup config file
         let config = create_test_config();
         let config_content = toml::to_string(&config).unwrap();
@@ -622,6 +687,8 @@ mod tests {
         let filesystem = MockFileSystem::new();
         let script_executor = MockScriptExecutor::new();
         let prompt = MockPrompt::new();
+
+        create_test_settings_file(&filesystem);
 
         // Setup config file
         let config = create_test_config();

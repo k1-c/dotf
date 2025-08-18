@@ -144,7 +144,11 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
 
     pub async fn get_repository_status(&self) -> DotfResult<RepositoryStatusInfo> {
         let settings = self.load_settings().await?;
-        let repo_path = self.filesystem.dotf_repo_path();
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
 
         let status = self.repository.get_status(&repo_path).await?;
 
@@ -193,7 +197,12 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         }
 
         let operations = self.create_symlink_operations(&symlinks).await?;
-        let repo_path = self.filesystem.dotf_repo_path();
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
         let symlink_infos = self
             .symlink_manager
             .get_symlink_status_with_changes(&operations, &self.repository, &repo_path)
@@ -232,7 +241,13 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     }
 
     pub async fn get_config_status(&self) -> DotfResult<ConfigStatusInfo> {
-        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let config_path = format!("{}/dotf.toml", repo_path);
         let errors = Vec::new();
 
         if !self.filesystem.exists(&config_path).await? {
@@ -316,7 +331,15 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
 
     async fn is_initialized(&self) -> DotfResult<bool> {
         let settings_path = self.filesystem.dotf_settings_path();
-        let repo_path = self.filesystem.dotf_repo_path();
+        // For initialization check, we need to handle the case where settings might not exist yet
+        let repo_path = if let Ok(settings) = self.load_settings().await {
+            settings
+                .repository
+                .local
+                .unwrap_or_else(|| self.filesystem.dotf_repo_path())
+        } else {
+            self.filesystem.dotf_repo_path()
+        };
 
         Ok(self.filesystem.exists(&settings_path).await?
             && self.filesystem.exists(&repo_path).await?)
@@ -337,7 +360,13 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
     }
 
     async fn load_config(&self) -> DotfResult<DotfConfig> {
-        let config_path = format!("{}/dotf.toml", self.filesystem.dotf_repo_path());
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
+        let config_path = format!("{}/dotf.toml", repo_path);
 
         if !self.filesystem.exists(&config_path).await? {
             return Err(DotfError::Config(
@@ -357,7 +386,12 @@ impl<R: Repository, F: FileSystem + Clone> StatusService<R, F> {
         symlinks: &HashMap<String, String>,
     ) -> DotfResult<Vec<SymlinkOperation>> {
         let mut operations = Vec::new();
-        let repo_path = self.filesystem.dotf_repo_path();
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
 
         for (source, target) in symlinks {
             // Expand target path (handle ~)

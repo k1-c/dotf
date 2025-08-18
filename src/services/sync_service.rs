@@ -28,7 +28,11 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
 
         // Load current settings
         let settings = self.load_settings().await?;
-        let repo_path = self.filesystem.dotf_repo_path();
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
 
         // Check if repository exists
         if !self.filesystem.exists(&repo_path).await? {
@@ -85,7 +89,12 @@ impl<R: Repository, F: FileSystem> SyncService<R, F> {
             return Ok(SyncStatus::NotInitialized);
         }
 
-        let repo_path = self.filesystem.dotf_repo_path();
+        let settings = self.load_settings().await?;
+        let repo_path = settings
+            .repository
+            .local
+            .clone()
+            .unwrap_or_else(|| self.filesystem.dotf_repo_path());
         if !self.filesystem.exists(&repo_path).await? {
             return Ok(SyncStatus::RepositoryMissing);
         }
