@@ -27,7 +27,7 @@ thiserror = "2.0"
 
 # File system
 dirs = "6.0"
-tempfile = "3.10"
+tempfile = "3.21"
 
 # Git operations
 git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2", "https", "vendored-openssl"] }
@@ -50,7 +50,7 @@ chrono = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"
-tempfile = "3.10"
+tempfile = "3.21"
 assert_matches = "1.5"
 mockall = "0.13"
 pretty_assertions = "1.4"
