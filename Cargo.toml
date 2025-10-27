@@ -37,7 +37,7 @@ async-trait = "0.1"
 
 # Terminal UI
 dialoguer = "0.12"
-indicatif = "0.17"
+indicatif = "0.18"
 colored = "3.0"
 
 # HTTP client for validation
