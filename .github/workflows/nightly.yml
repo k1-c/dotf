@@ -84,7 +84,7 @@ jobs:
         cp target/release/dotf nightly-build/dotf-nightly-$(date +%Y%m%d)
 
     - name: Upload nightly artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: dotf-nightly-${{ github.run_id }}
         path: nightly-build/
